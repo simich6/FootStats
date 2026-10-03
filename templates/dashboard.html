@@ -82,6 +82,7 @@ th{font-weight:600;color:var(--muted);font-size:.8rem}
 .empty{padding:32px;text-align:center;color:var(--muted)}
 .chartbox{position:relative;height:240px}
 footer{max-width:1080px;margin:24px auto;padding:0 16px 32px;color:var(--muted);font-size:.85rem}
+.bigm{display:inline-block;background:var(--value);color:#1D2A24;font:700 .72rem/1 "Source Sans 3",sans-serif;letter-spacing:.04em;text-transform:uppercase;padding:3px 6px;border-radius:4px;vertical-align:middle;margin-left:6px}
 .hero{display:flex;justify-content:space-between;align-items:end;gap:12px;padding:18px;border-radius:14px;color:#fff;margin-bottom:12px;
   background:linear-gradient(135deg,#1F4D3A 0%,#2E6B4F 60%,#3D7F5E 100%);position:relative;overflow:hidden}
 .hero::after{content:"";position:absolute;right:-40px;top:-40px;width:160px;height:160px;border:2px solid rgba(255,255,255,.18);border-radius:50%}
@@ -215,7 +216,7 @@ function renderTop(){
     <div class="row toolbar">${seg("n",[[3,"Top 3"],[4,"4"],[5,"5"]])}${seg("days",[[3,"Weekend"],[7,"7 giorni"]])}${seg("gap",[[5,"Scarto 5"],[10,"10"]])}
     <label class="row note" style="gap:6px"><input type="checkbox" id="topCap" ${TOP.cap?"checked":""}> nascondi le scontate (oltre 85%)</label></div>
     ${cards.length?cards.map((c,i)=>`<article class="tc ${i===0?"first":""}">
-      <div class="tc-head"><span class="rk">${i+1}</span><div><div class="tc-teams">${esc(c.f.home)} <span>vs</span> ${esc(c.f.away)}</div>
+      <div class="tc-head"><span class="rk">${i+1}</span><div><div class="tc-teams">${esc(c.f.home)} <span>vs</span> ${esc(c.f.away)}${c.f.big?'<span class="bigm">Big match</span>':""}</div>
       <div class="note">${esc(c.f.league)} · ${new Date(c.f.date+"T12:00").toLocaleDateString("it-IT",{weekday:"short",day:"numeric",month:"short"})} ${esc(c.f.time||"")}</div></div></div>
       ${c.picks.map((p,k)=>`<div class="tp">${ring(p.prob,k===0)}<div><div class="tp-l">${chipLabel(p)}</div><div class="tp-w">${why(c.f,p)}</div></div></div>`).join("")}
     </article>`).join("")
@@ -236,7 +237,7 @@ function renderMatches(){
     const[h,d,a]=oneX2(f);
     const top=f.picks.filter(p=>passes(p,F)).sort((x,y)=>y.prob*y.confidence-x.prob*x.confidence).slice(0,4);
     const card=document.createElement("div");card.className="match";card.tabIndex=0;
-    card.innerHTML=`<div class="teams"><span>${esc(f.home)}${miniForm(f.home)}</span><span class="meta">${esc(f.league)}<br>${esc(f.time||"")}</span><span class="a">${esc(f.away)}${miniForm(f.away)}</span></div>
+    card.innerHTML=`<div class="teams"><span>${esc(f.home)}${miniForm(f.home)}</span><span class="meta">${esc(f.league)}<br>${esc(f.time||"")}${f.big?'<br><span class="bigm" style="margin:2px 0 0">Big match</span>':""}</span><span class="a">${esc(f.away)}${miniForm(f.away)}</span></div>
       <div class="bar" role="img" aria-label="1 ${pct(h)}, X ${pct(d)}, 2 ${pct(a)}"><span class="h" style="flex:${h*100}">1 ${pct(h)}</span><span class="d" style="flex:${d*100}">X ${pct(d)}</span><span class="x" style="flex:${a*100}">2 ${pct(a)}</span></div>
       <div class="top">${top.map(p=>`<span class="chip"><span class="dot ${p.reliability}"></span>${chipLabel(p)} <b>${pct(p.prob)}</b></span>`).join("")||'<span class="note">Nessuna giocata supera i filtri.</span>'}</div>`;
     const toggle=()=>{const open=card.querySelector(".detail");if(open){open.remove();return}card.appendChild(matchDetail(f,i))};
