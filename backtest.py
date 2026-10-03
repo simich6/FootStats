@@ -184,18 +184,21 @@ def tune(matches: pd.DataFrame) -> dict:
     Usa le due stagioni concluse più recenti; la stagione in corso resta fuori."""
     seasons = sorted(matches["season"].unique())
     test = seasons[-3:-1] if len(seasons) >= 4 else seasons[-2:]
-    results = []
-    for hl in (90, 150, 240):
-        for dc in (True, False):
-            config.HALF_LIFE_DAYS, config.DIXON_COLES = hl, dc
-            bt = walk_forward(matches, test, quiet=True)
-            p = bt["prob"].clip(1e-6, 1 - 1e-6)
-            ll = float(-np.mean(bt["won"] * np.log(p) + (1 - bt["won"]) * np.log(1 - p)))
-            results.append((ll, hl, dc))
-            print(f"  memoria {hl} giorni, Dixon-Coles {'sì' if dc else 'no'}: log loss {ll:.5f}")
-    ll, hl, dc = min(results)
-    params = {"HALF_LIFE_DAYS": hl, "DIXON_COLES": dc}
-    config.HALF_LIFE_DAYS, config.DIXON_COLES = hl, dc
+    def score(hl, dc, bm):
+        config.HALF_LIFE_DAYS, config.DIXON_COLES, config.BIG_MATCH = hl, dc, bm
+        bt = walk_forward(matches, test, quiet=True)
+        p = bt["prob"].clip(1e-6, 1 - 1e-6)
+        ll = float(-np.mean(bt["won"] * np.log(p) + (1 - bt["won"]) * np.log(1 - p)))
+        yn = lambda x: "sì" if x else "no"
+        print(f"  memoria {hl} giorni, Dixon-Coles {yn(dc)}, big match {yn(bm)}: log loss {ll:.5f}")
+        return ll
+
+    # 1) memoria e Dixon-Coles, 2) big match acceso/spento con le impostazioni migliori
+    _, hl, dc = min((score(hl, dc, False), hl, dc) for hl in (90, 150, 240) for dc in (True, False))
+    off, on = score(hl, dc, False), score(hl, dc, True)
+    bm = on < off
+    params = {"HALF_LIFE_DAYS": hl, "DIXON_COLES": dc, "BIG_MATCH": bm, "PARAMS_VERSION": config.PARAMS_VERSION}
+    config.HALF_LIFE_DAYS, config.DIXON_COLES, config.BIG_MATCH = hl, dc, bm
     config.PARAMS_PATH.write_text(json.dumps(params))
-    print(f"  scelto: memoria {hl} giorni, Dixon-Coles {'sì' if dc else 'no'}")
+    print(f"  scelto: memoria {hl} giorni, Dixon-Coles {'sì' if dc else 'no'}, big match {'sì' if bm else 'no'}")
     return params

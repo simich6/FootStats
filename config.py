@@ -31,7 +31,10 @@ HALF_LIFE_DAYS = 150     # una partita di 150 giorni fa pesa la metà di una di 
 LOOKBACK_DAYS = 730      # storico massimo usato per stimare le squadre
 SHRINK_MATCHES = 4.0     # "partite fittizie" nella media: evita valutazioni estreme con pochi dati
 MIN_HISTORY = 120
-DIXON_COLES = True       # corregge la sottostima di pareggi e risultati bassi        # partite minime di campionato prima di iniziare a prevedere
+DIXON_COLES = True       # corregge la sottostima di pareggi e risultati bassi
+BIG_MATCH = True         # correzione per le partite tra squadre di vertice
+TOP_N = 6                # squadre considerate "di vertice" in ogni campionato
+PARAMS_VERSION = 2       # se cambia, la taratura viene rifatta automaticamente        # partite minime di campionato prima di iniziare a prevedere
 
 # Backtest e valore
 BACKTEST_SEASONS = 3     # ultime stagioni simulate (walk-forward)
@@ -48,7 +51,12 @@ def season_codes(n: int = N_SEASONS, today: date | None = None) -> list[str]:
 
 # Parametri tarati con `python run.py --tune` (se presenti sostituiscono quelli sopra)
 PARAMS_PATH = DATA_DIR / "params.json"
+_CODE_VERSION = PARAMS_VERSION
+PARAMS_OUTDATED = True
 if PARAMS_PATH.exists():
     import json as _json
-    for _k, _v in _json.loads(PARAMS_PATH.read_text()).items():
-        globals()[_k] = _v
+    _p = _json.loads(PARAMS_PATH.read_text())
+    PARAMS_OUTDATED = _p.get("PARAMS_VERSION") != _CODE_VERSION
+    if not PARAMS_OUTDATED:
+        for _k, _v in _p.items():
+            globals()[_k] = _v

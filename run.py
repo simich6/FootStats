@@ -29,7 +29,7 @@ def main():
     matches = provider.matches()
     print(f"    {len(matches)} partite, {matches['date'].min().date()} → {matches['date'].max().date()}")
 
-    if args.tune:
+    if args.tune or config.PARAMS_OUTDATED:
         print("   Taratura del modello")
         backtest.tune(matches)
     bt = backtest.load()

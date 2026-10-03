@@ -31,6 +31,11 @@ class Ratings:
     dfn: dict
     alpha: float  # sovradispersione: 0 = Poisson
     rho: float = 0.0  # correzione Dixon-Coles (solo gol): risultati bassi e pareggi
+    big: float = 1.0  # moltiplicatore nei big match (stimato dai dati)
+    top: frozenset = frozenset()
+
+    def is_big(self, home, away):
+        return home in self.top and away in self.top
 
     def team(self, name):
         if name in self.att:
@@ -40,10 +45,11 @@ class Ratings:
     def expected(self, home, away):
         ah, dh = self.team(home)
         aa, da = self.team(away)
-        return self.mu_home * ah * da, self.mu_away * aa * dh
+        f = self.big if self.is_big(home, away) else 1.0
+        return self.mu_home * ah * da * f, self.mu_away * aa * dh * f
 
 
-def fit_ratings(hist: pd.DataFrame, ref_date: pd.Timestamp, stat: str) -> Ratings | None:
+def fit_ratings(hist: pd.DataFrame, ref_date: pd.Timestamp, stat: str, top: frozenset = frozenset()) -> Ratings | None:
     hc, ac = f"h_{stat}", f"a_{stat}"
     age = (ref_date - hist["date"]).dt.days
     h = hist[(age > 0) & (age <= config.LOOKBACK_DAYS)].dropna(subset=[hc, ac])
@@ -83,7 +89,17 @@ def fit_ratings(hist: pd.DataFrame, ref_date: pd.Timestamp, stat: str) -> Rating
             if ll > best:
                 best, rho = ll, float(r)
 
-    return Ratings(stat, mu_h, mu_a, dict(zip(teams, att)), dict(zip(teams, dfn)), alpha, rho)
+    big = 1.0
+    if top:
+        # Nei big match si produce più o meno di quanto direbbe la forza delle squadre?
+        eh, ea = mu_h * att[ih] * dfn[ia], mu_a * att[ia] * dfn[ih]
+        mask = h["home"].isin(top).to_numpy() & h["away"].isin(top).to_numpy()
+        prior = 10 * (mu_h + mu_a)  # equivale a 10 partite "normali": evita correzioni eccessive
+        obs = np.sum(w[mask] * (yh[mask] + ya[mask]))
+        exp = np.sum(w[mask] * (eh[mask] + ea[mask]))
+        big = float(np.clip((obs + prior) / (exp + prior), 0.8, 1.2))
+
+    return Ratings(stat, mu_h, mu_a, dict(zip(teams, att)), dict(zip(teams, dfn)), alpha, rho, big, top)
 
 
 def _tau(x, y, lh, la, rho):
@@ -96,8 +112,16 @@ def _tau(x, y, lh, la, rho):
 
 
 def fit_all(hist: pd.DataFrame, ref_date: pd.Timestamp) -> dict:
-    return {s: r for s in STATS if (r := fit_ratings(hist, ref_date, s)) is not None}
-
+    first = fit_ratings(hist, ref_date, "goals")
+    if first is None:
+        return {}
+    top = frozenset()
+    if config.BIG_MATCH:
+        recent = hist[hist["date"] >= ref_date - pd.Timedelta(days=365)]
+        active = set(recent["home"]) | set(recent["away"])
+        strength = {t: first.att[t] / first.dfn[t] for t in first.att if t in active}
+        top = frozenset(sorted(strength, key=strength.get, reverse=True)[:config.TOP_N])
+    return {s: r for s in STATS if (r := fit_ratings(hist, ref_date, s, top)) is not None}
 
 def pmf(lam: float, alpha: float, nmax: int) -> np.ndarray:
     k = np.arange(nmax + 1)
