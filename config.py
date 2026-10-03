@@ -8,6 +8,11 @@ LEAGUES = {
     "SP1": "La Liga",
     "D1": "Bundesliga",
     "F1": "Ligue 1",
+    "I2": "Serie B",
+    "E1": "Championship",
+    "SP2": "Segunda División",
+    "D2": "2. Bundesliga",
+    "F2": "Ligue 2",
 }
 
 N_SEASONS = 5  # stagioni di storico (compresa quella in corso)
