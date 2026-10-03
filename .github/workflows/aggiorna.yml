@@ -1,0 +1,51 @@
+name: Aggiorna Footstats
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: footstats
+  cancel-in-progress: false
+
+jobs:
+  aggiorna:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/cache@v4
+        with:
+          path: data
+          key: footstats-data-${{ github.run_id }}
+          restore-keys: footstats-data-
+      - run: pip install pandas numpy scipy requests
+      - name: Aggiorna dati e dashboard
+        run: |
+          if [ ! -f data/params.json ]; then python run.py --tune
+          elif [ "$(date +%u)" = "1" ]; then python run.py --backtest
+          else python run.py
+          fi
+          cp output/dashboard.html output/index.html
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: output
+
+  pubblica:
+    needs: aggiorna
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4
