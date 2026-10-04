@@ -9,6 +9,7 @@ import json
 
 import backtest
 import config
+import history
 import predict
 from providers import FootballDataCoUkProvider
 
@@ -29,11 +30,12 @@ def main():
     matches = provider.matches()
     print(f"    {len(matches)} partite, {matches['date'].min().date()} → {matches['date'].max().date()}")
 
-    if args.tune or config.PARAMS_OUTDATED:
+    tuned = args.tune or config.PARAMS_OUTDATED
+    if tuned:
         print("   Taratura del modello")
         backtest.tune(matches)
     bt = backtest.load()
-    if args.backtest or args.tune or bt is None:
+    if args.backtest or tuned or bt is None:
         print("3/4 Backtest walk-forward (una tantum, qualche minuto)")
         bt = backtest.run(matches)
     else:
@@ -46,8 +48,13 @@ def main():
     leagues = predict.league_trends(matches)
     (config.OUTPUT_DIR).mkdir(exist_ok=True)
     (config.OUTPUT_DIR / "predictions.json").write_text(json.dumps(preds, ensure_ascii=False, default=float))
+    hist = history.update(history.load(), history.top_candidates(preds, bt is not None), matches)
+    history.save(hist)
+    done = [h for h in hist if h["won"] is not None]
+    print(f"    storico: {len(hist)} previsioni, {len(done)} verificate")
     import report
-    path = report.build(preds, trends, leagues, bt)
+    path = report.build(preds, trends, leagues, bt, history=hist,
+                        results=history.recent_results(matches), mdefs=history.market_defs())
     print(f"\nFatto. Apri {path} nel browser.")
 
 

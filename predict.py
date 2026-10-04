@@ -61,10 +61,12 @@ def predict_fixtures(matches: pd.DataFrame, fixtures: pd.DataFrame, bt: dict | N
                                 edge=round(p - implied, 4), ev=round(p * odds - 1, 4))
                 picks.append(pick)
             out.append({
-                "league": config.LEAGUES[league], "date": str(f["date"].date()), "time": f.get("time", ""),
+                "league": config.LEAGUES[league], "code": league, "date": str(f["date"].date()), "time": f.get("time", ""),
                 "home": f["home"], "away": f["away"], "new_team": [nh == 0, na == 0],
                 "big": ratings["goals"].is_big(f["home"], f["away"]),
                 "expected": {s: [round(d["exp_h"], 2), round(d["exp_a"], 2)] for s, d in dist.items()},
+                "alpha": {s: round(r.alpha, 4) for s, r in ratings.items()},
+                "lavg": {s: round(r.mu_home + r.mu_away, 2) for s, r in ratings.items()},
                 "dist": {s: _trim(d["total"]) for s, d in dist.items()},
                 "picks": picks,
             })

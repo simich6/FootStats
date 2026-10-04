@@ -30,11 +30,11 @@ OUTPUT_DIR = ROOT / "output"
 HALF_LIFE_DAYS = 150     # una partita di 150 giorni fa pesa la metà di una di oggi
 LOOKBACK_DAYS = 730      # storico massimo usato per stimare le squadre
 SHRINK_MATCHES = 4.0     # "partite fittizie" nella media: evita valutazioni estreme con pochi dati
-MIN_HISTORY = 120
+MIN_HISTORY = 120        # partite minime di campionato prima di iniziare a prevedere
 DIXON_COLES = True       # corregge la sottostima di pareggi e risultati bassi
 BIG_MATCH = True         # correzione per le partite tra squadre di vertice
 TOP_N = 6                # squadre considerate "di vertice" in ogni campionato
-PARAMS_VERSION = 2       # se cambia, la taratura viene rifatta automaticamente        # partite minime di campionato prima di iniziare a prevedere
+PARAMS_VERSION = 3       # se cambia, la taratura viene rifatta automaticamente
 
 # Backtest e valore
 BACKTEST_SEASONS = 3     # ultime stagioni simulate (walk-forward)
