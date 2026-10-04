@@ -168,8 +168,8 @@ tr.pick{cursor:pointer}
   <div class="filters" id="filters">
     <label>Campionato<select id="fLeague"><option value="">Tutti</option></select></label>
     <label>Mercato<select id="fGroup"><option value="">Tutti</option></select></label>
-    <label>Prob. minima <span id="vProb">60%</span><input type="range" id="fProb" min="50" max="95" step="5" value="60"></label>
-    <label>Prob. massima <span id="vMax">85%</span><input type="range" id="fMax" min="60" max="100" step="5" value="85"></label>
+    <label>Prob. minima <span id="vProb">50%</span><input type="range" id="fProb" min="50" max="95" step="5" value="50"></label>
+    <label>Prob. massima <span id="vMax">75%</span><input type="range" id="fMax" min="60" max="100" step="5" value="75"></label>
     <label>Affidabilità minima <span id="vConf">5</span><input type="range" id="fConf" min="0" max="10" step="0.5" value="5"></label>
     <label style="flex-direction:row;align-items:center;gap:6px;color:var(--ink)"><input type="checkbox" id="fGreen"> Solo mercati verdi</label>
   </div>
@@ -217,7 +217,8 @@ const miniForm=t=>`<span class="mini-form">${games(t).slice(-5).map(g=>`<i class
 function oneX2(f){const g=k=>f.picks.find(p=>p.key===k)?.prob??0;return[g("1"),g("X"),g("2")]}
 
 /* ---------- TOP DELLA SETTIMANA ---------- */
-const TOP={n:5,days:7,cap:true,gap:5,mine:false};
+const TOP={n:5,days:7,band:"50-75",gap:5,mine:false};
+const bandRange=()=>TOP.band.split("-").map(x=>+x/100);
 const STATKEY={"Gol":"goals","Calci d'angolo":"corners","Cartellini":"cards","Falli":"fouls","Tiri totali":"shots","Tiri in porta":"sot"};
 function why(f,p){
   const st=STATKEY[p.group]||"goals",e=f.expected[st];if(!e)return"";
@@ -235,7 +236,7 @@ function renderTop(){
   const el=$("top"),F=filters(),now=new Date();now.setHours(0,0,0,0);const lim=new Date(now);lim.setDate(lim.getDate()+TOP.days);
   const hasBt=!!DATA.backtest,mine=myMarkets();
   const cards=DATA.fixtures.filter(f=>(!F.league||f.league===F.league)&&new Date(f.date+"T12:00")<lim&&!f.new_team.some(Boolean)).map(f=>{
-    const ok=f.picks.filter(p=>(!hasBt||p.reliability!=="red")&&(!TOP.cap||p.prob<=0.85)&&(!TOP.mine||mine.has(p.group))).sort((a,b)=>b.prob-a.prob);
+    const ok=f.picks.filter(p=>(!hasBt||p.reliability!=="red")&&p.prob>=bandRange()[0]&&p.prob<=bandRange()[1]&&(!TOP.mine||mine.has(p.group))).sort((a,b)=>b.prob-a.prob);
     if(!ok.length)return null;
     const chosen=[ok[0]],groups=new Set([ok[0].group]);
     for(const p of ok.slice(1)){if(chosen.length>=3)break;
@@ -246,7 +247,7 @@ function renderTop(){
   const nPicks=cards.reduce((a,c)=>a+c.picks.length,0);
   el.innerHTML=`<div class="hero"><div><div class="hero-k">Le giocate più probabili</div><div class="hero-v">${range}</div></div><div class="hero-n"><b>${nPicks}</b> giocate<br>${cards.length} partite</div></div>
     <div class="row toolbar">${seg("n",[[3,"Top 3"],[4,"4"],[5,"5"]])}${seg("days",[[3,"Weekend"],[7,"7 giorni"]])}${seg("gap",[[5,"Scarto 5"],[10,"10"]])}
-    <label class="row note" style="gap:6px"><input type="checkbox" id="topCap" ${TOP.cap?"checked":""}> nascondi le scontate (oltre 85%)</label>
+    <span class="seg" role="group" aria-label="Fascia di probabilità">${[["50-75","50–75%"],["60-80","60–80%"],["50-85","50–85%"]].map(([v,l])=>`<button aria-pressed="${TOP.band===v}" data-band="${v}">${l}</button>`).join("")}</span>
     <label class="row note" style="gap:6px"><input type="checkbox" id="topMine" ${TOP.mine?"checked":""} ${mine.size?"":"disabled"}> solo i miei mercati${mine.size?` (${[...mine].join(", ")})`:" (servono 30 giocate in attivo su un mercato)"}</label></div>
     ${cards.length?cards.map((c,i)=>`<article class="tc ${i===0?"first":""}">
       <div class="tc-head"><span class="rk">${i+1}</span><div><div class="tc-teams">${esc(c.f.home)} <span>vs</span> ${esc(c.f.away)}${c.f.big?'<span class="bigm">Big match</span>':""}</div>
@@ -256,7 +257,7 @@ function renderTop(){
     :'<p class="empty">Nessuna partita nel periodo scelto. Aggiorna i dati o allarga a 7 giorni.</p>'}
     <p class="note">Per ogni partita la giocata più probabile, più fino a 2 alternative su mercati diversi solo se distano al massimo ${TOP.gap} punti. Solo mercati che nel backtest si sono dimostrati affidabili.</p>`;
   el.querySelectorAll("[data-k]").forEach(b=>b.addEventListener("click",()=>{TOP[b.dataset.k]=+b.dataset.v;renderTop()}));
-  $("topCap").addEventListener("change",e=>{TOP.cap=e.target.checked;renderTop()});
+  el.querySelectorAll("[data-band]").forEach(b=>b.addEventListener("click",()=>{TOP.band=b.dataset.band;renderTop()}));
   $("topMine").addEventListener("change",e=>{TOP.mine=e.target.checked;renderTop()});
   el.querySelectorAll(".playbtn").forEach(b=>b.addEventListener("click",()=>{const f=DATA.fixtures[+b.dataset.fi];quickAdd(f,f.picks.find(p=>p.key===b.dataset.pk))}));
 }
