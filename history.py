@@ -14,7 +14,7 @@ import config
 import markets as mk
 
 MDEF = {m["key"]: m for m in mk.MARKETS}
-CAP, GAP = 0.85, 0.05  # stesse regole del Top della settimana
+LO, HI, GAP = 0.50, 0.75, 0.05  # stesse regole del Top della settimana (fascia predefinita 50-75%)
 
 
 def top_candidates(preds: list[dict], has_backtest: bool) -> list[dict]:
@@ -23,7 +23,7 @@ def top_candidates(preds: list[dict], has_backtest: bool) -> list[dict]:
     for f in preds:
         if any(f["new_team"]):
             continue
-        ok = sorted((p for p in f["picks"] if (not has_backtest or p["reliability"] != "red") and p["prob"] <= CAP),
+        ok = sorted((p for p in f["picks"] if (not has_backtest or p["reliability"] != "red") and LO <= p["prob"] <= HI),
                     key=lambda p: -p["prob"])
         if not ok:
             continue
