@@ -18,7 +18,7 @@ LO, HI, GAP = 0.40, 0.75, 1.0  # stesse regole del Top della settimana (fascia p
 
 
 def top_candidates(preds: list[dict], has_backtest: bool) -> list[dict]:
-    """Per ogni partita: la giocata più probabile + fino a 2 alternative entro 5 punti su mercati diversi."""
+    """Per ogni partita: le 5 giocate più probabili nella fascia, su mercati diversi (come il Top con la tendina)."""
     out = []
     for f in preds:
         if any(f["new_team"]):
@@ -27,18 +27,20 @@ def top_candidates(preds: list[dict], has_backtest: bool) -> list[dict]:
                     key=lambda p: -p["prob"])
         if not ok:
             continue
-        chosen, groups = [ok[0]], {ok[0]["group"]}
-        for p in ok[1:]:
-            if len(chosen) >= 3:
+        chosen, seen = [], set()
+        for p in ok:
+            if len(chosen) >= 5:
                 break
-            if ok[0]["prob"] - p["prob"] <= GAP and p["group"] not in groups:
-                chosen.append(p)
-                groups.add(p["group"])
+            fam = (p["group"], p["label"].split(" ")[0] if p["label"].startswith(("Casa", "Ospite")) else "")
+            if fam in seen:
+                continue
+            chosen.append(p)
+            seen.add(fam)
         for k, p in enumerate(chosen):
             out.append({"id": f"{f['date']}|{f['home']}|{f['away']}|{p['key']}", "date": f["date"],
                         "league": f["league"], "code": f["code"], "home": f["home"], "away": f["away"],
                         "key": p["key"], "group": p["group"], "label": p["label"], "prob": p["prob"],
-                        "main": k == 0, "won": None})
+                        "raw": p.get("raw", p["prob"]), "main": k == 0, "won": None})
     return out
 
 
@@ -120,3 +122,59 @@ def recent_results(matches: pd.DataFrame, days: int = 45) -> list[dict]:
 
 def market_defs() -> dict:
     return {m["key"]: {"stat": m["stat"], "kind": m["kind"], "args": list(m["args"])} for m in mk.MARKETS}
+
+
+# ---------- Apprendimento adattivo ----------
+ADAPT_MIN = 50       # previsioni verificate necessarie prima di correggere un mercato
+ADAPT_PRIOR = 200    # zavorra: con 200 previsioni la correzione vale metà di quella stimata
+K_GRID = np.arange(0.6, 1.41, 0.02)
+
+
+def _logit(p):
+    p = np.clip(p, 1e-4, 1 - 1e-4)
+    return np.log(p / (1 - p))
+
+
+def adaptive(history: list[dict]) -> dict:
+    """Mercato per mercato confronta quanto il modello prevedeva (prima della correzione) e quanto è
+    uscito nelle giocate proposte, e stima un fattore k: le percentuali future diventano
+    logit(p') = k * logit(p). k < 1 = percentuali più prudenti (il modello era troppo sicuro),
+    k > 1 = più decise. È coerente: Goal e No Goal, Over e Under restano complementari."""
+    out = {}
+    groups: dict[str, list] = {}
+    for h in history:
+        if h.get("won") is not None:
+            groups.setdefault(h["group"], []).append(h)
+    for g, rows in groups.items():
+        n = len(rows)
+        raw = np.array([r.get("raw", r["prob"]) for r in rows], float)
+        y = np.array([r["won"] for r in rows], float)
+        lr = _logit(raw)
+        best_k, best_ll = 1.0, np.inf
+        for k in K_GRID:
+            p = np.clip(1 / (1 + np.exp(-k * lr)), 1e-6, 1 - 1e-6)
+            ll = -np.mean(y * np.log(p) + (1 - y) * np.log(1 - p))
+            if ll < best_ll:
+                best_k, best_ll = float(k), ll
+        weight = n / (n + ADAPT_PRIOR)
+        k = 1 + (best_k - 1) * weight if n >= ADAPT_MIN else 1.0
+        out[g] = {"n": n, "pred": round(float(raw.mean()), 4), "hit": round(float(y.mean()), 4),
+                  "k": round(k, 3), "active": n >= ADAPT_MIN}
+    return out
+
+
+def apply_adaptive(preds: list[dict], adapt: dict) -> None:
+    """Applica la correzione alle percentuali; la probabilità originale resta in "raw"."""
+    for f in preds:
+        for p in f["picks"]:
+            k = adapt.get(p["group"], {}).get("k", 1.0)
+            p["raw"] = p["prob"]
+            if abs(k - 1) < 1e-3:
+                continue
+            new = float(1 / (1 + np.exp(-k * _logit(p["prob"]))))
+            p["adj"] = round(new - p["prob"], 4)
+            p["prob"] = round(new, 4)
+            p["fair_odds"] = round(1 / p["prob"], 2)
+            if p.get("implied") is not None:
+                p["edge"] = round(p["prob"] - p["implied"], 4)
+                p["ev"] = round(p["prob"] * p["odds"] - 1, 4)

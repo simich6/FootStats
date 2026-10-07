@@ -47,13 +47,18 @@ def main():
     trends = predict.team_trends(matches)
     leagues = predict.league_trends(matches)
     (config.OUTPUT_DIR).mkdir(exist_ok=True)
+    past = history.load()
+    adapt = history.adaptive(past)
+    history.apply_adaptive(preds, adapt)
+    active = {g: a["k"] for g, a in adapt.items() if a["active"]}
     (config.OUTPUT_DIR / "predictions.json").write_text(json.dumps(preds, ensure_ascii=False, default=float))
-    hist = history.update(history.load(), history.top_candidates(preds, bt is not None), matches)
+    print(f"    correzioni adattive attive: {active or 'nessuna (servono 50 previsioni verificate per mercato)'}")
+    hist = history.update(past, history.top_candidates(preds, bt is not None), matches)
     history.save(hist)
     done = [h for h in hist if h["won"] is not None]
     print(f"    storico: {len(hist)} previsioni, {len(done)} verificate")
     import report
-    path = report.build(preds, trends, leagues, bt, history=hist,
+    path = report.build(preds, trends, leagues, bt, history=hist, adapt=adapt,
                         results=history.recent_results(matches), mdefs=history.market_defs(),
                         ratings=predict.export_ratings(matches))
     print(f"\nFatto. Apri {path} nel browser.")
