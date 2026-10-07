@@ -122,6 +122,14 @@ table.reg td,table.reg th{padding:5px 6px;font-size:.84rem}
 .lad span{font-size:.8rem;color:var(--muted)}.lad b{font:700 1.3rem "Barlow Condensed",sans-serif}.lad small{font-size:.75rem;color:var(--muted)}
 .lad.on{border:2px solid var(--turf);background:var(--turf-soft)}
 .playbtn.edit{border-color:var(--away);color:var(--away)}
+.more{display:block;width:100%;margin-top:6px;border:1px dashed var(--line);background:none;color:var(--muted);border-radius:8px;padding:6px;font:inherit;font-size:.88rem;cursor:pointer}
+.hero.mh{background:linear-gradient(135deg,#3E2A6B 0%,#5B3F96 60%,#7656B5 100%)}
+.mcard{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:10px}
+.mhead{display:grid;grid-template-columns:64px 1fr;gap:12px;align-items:center;margin-bottom:6px}
+.mleg{display:flex;gap:10px;align-items:flex-start;padding:6px 0;border-top:1px solid var(--line);font-size:.92rem}
+table.heat td,table.heat th{text-align:center;padding:5px 4px;font-size:.82rem;border:1px solid var(--line)}
+table.heat th:first-child{font-size:.72rem;white-space:normal}
+details.sgrid summary{cursor:pointer;margin:6px 0}
 .hero{display:flex;justify-content:space-between;align-items:end;gap:12px;padding:18px;border-radius:14px;color:#fff;margin-bottom:12px;
   background:linear-gradient(135deg,#1F4D3A 0%,#2E6B4F 60%,#3D7F5E 100%);position:relative;overflow:hidden}
 .hero::after{content:"";position:absolute;right:-40px;top:-40px;width:160px;height:160px;border:2px solid rgba(255,255,255,.18);border-radius:50%}
@@ -166,6 +174,7 @@ tr.pick{cursor:pointer}
 </header>
 <nav role="tablist">
   <button role="tab" aria-selected="true" data-tab="top">Top della settimana</button>
+  <button role="tab" aria-selected="false" data-tab="multi">Multiple</button>
   <button role="tab" aria-selected="false" data-tab="value">Valore</button>
   <button role="tab" aria-selected="false" data-tab="analyze">Analizza</button>
   <button role="tab" aria-selected="false" data-tab="matches">Partite</button>
@@ -186,6 +195,7 @@ tr.pick{cursor:pointer}
     <label style="flex-direction:row;align-items:center;gap:6px;color:var(--ink)"><input type="checkbox" id="fGreen"> Solo mercati verdi</label>
   </div>
   <section id="top"></section>
+  <section id="multi" hidden></section>
   <section id="value" hidden></section>
   <section id="analyze" hidden></section>
   <section id="matches" hidden></section>
@@ -224,7 +234,7 @@ leagueNames.forEach(l=>$("fLeague").add(new Option(l,l)));
 
 function filters(){return{league:$("fLeague").value,group:$("fGroup").value,prob:+$("fProb").value/100,max:+$("fMax").value/100,conf:+$("fConf").value,green:$("fGreen").checked}}
 function passes(p,F){return avail(p)&&(!F.group||p.group===F.group)&&p.prob>=F.prob&&p.prob<=F.max&&p.confidence>=F.conf&&(!F.green||p.reliability==="green")}
-function chipLabel(p){if(p.group==="Esito finale")return"Esito "+p.label;if(p.group==="Gol")return/^(Over|Under|Casa|Ospite)/.test(p.label)?p.label+" gol":p.label;return p.label+" "+p.group.toLowerCase()}
+function chipLabel(p){if(p.group==="Multipla")return p.label;if(p.group==="Esito finale")return"Esito "+p.label;if(p.group==="Gol")return/^(Over|Under|Casa|Ospite)/.test(p.label)?p.label+" gol":p.label;return p.label+" "+p.group.toLowerCase()}
 const games=t=>DATA.trends[t]?.games||[];
 const miniForm=t=>`<span class="mini-form">${games(t).slice(-5).map(g=>`<i class="${g.res}" title="${g.res}"></i>`).join("")}</span>`;
 function oneX2(f){const g=k=>f.picks.find(p=>p.key===k)?.prob??0;return[g("1"),g("X"),g("2")]}
@@ -242,7 +252,16 @@ function family(key){const d=DATA.mdefs?.[key];if(!d)return null;
   return S?S[team?1:0]:null}
 function loadMk(){try{const v=JSON.parse(localStorage.getItem(MKEY));return new Set(v||PRESET_COMMON)}catch(e){return new Set(PRESET_COMMON)}}
 let MK=loadMk();
-const avail=p=>{const f=family(p.key);return f==null||MK.has(f)};
+const LKEY="footstats-linee";
+let MAINONLY=(()=>{try{return localStorage.getItem(LKEY)!=="all"}catch(e){return true}})();
+const MAINFAM=new Set(["CT","CS","KT","KS","FT","FS","ST","SS","OT","OS"]);
+function markMain(){DATA.fixtures.forEach(f=>{const groups={};
+  f.picks.forEach(p=>{p.alt=false;const d=DATA.mdefs?.[p.key],fam=family(p.key);if(!d||!MAINFAM.has(fam)||!d.kind.endsWith("over"))return;
+    const k=d.stat+"|"+d.kind.split("_")[0];(groups[k]??=[]).push({line:d.args[0],p:p.prob})});
+  const main={};for(const[k,a]of Object.entries(groups)){a.sort((x,y)=>Math.abs(x.p-.5)-Math.abs(y.p-.5));main[k]=a[0].line}
+  f.picks.forEach(p=>{const d=DATA.mdefs?.[p.key];if(!d||!MAINFAM.has(family(p.key))||!/(over|under)$/.test(d.kind))return;
+    const k=d.stat+"|"+d.kind.split("_")[0];if(main[k]!=null&&d.args[0]!==main[k])p.alt=true})})}
+const avail=p=>{const f=family(p.key);return(f==null||MK.has(f))&&!(MAINONLY&&p.alt)};
 function marketSheet(){
   const sh=document.createElement("div");sh.className="sheet-bg";
   const draw=()=>{sh.innerHTML=`<div class="sheet" role="dialog" aria-label="Mercati"><div class="grab"></div>
@@ -250,16 +269,50 @@ function marketSheet(){
     <p class="note">L'app proporrà solo questi. Controlla su Bet365 quali mercati compaiono per le partite che segui e togli gli altri: cambiano da partita a partita.</p>
     <div class="row" style="margin-bottom:8px"><button class="btn small ghost" data-p="common">Più comuni</button><button class="btn small ghost" data-p="all">Tutti</button></div>
     <div class="mkgrid">${FAMILIES.map(([k,l])=>`<label class="mk"><input type="checkbox" value="${k}" ${MK.has(k)?"checked":""}> ${l}</label>`).join("")}</div>
+    <label class="mk" style="margin-top:12px;border-top:1px solid var(--line);padding-top:10px"><input type="checkbox" id="mMain" ${MAINONLY?"checked":""}> <span><b>Solo linee principali</b><br><span class="note">Per corner, cartellini, falli e tiri propone solo la linea che il bookmaker mette di solito, quella vicina al valore atteso (es. 4.5 cartellini). Le altre restano in Analizza.</span></span></label>
     <div class="row" style="margin-top:12px"><button class="btn mSave">Salva</button><button class="btn ghost mX">Annulla</button></div></div>`;
     sh.querySelectorAll("[data-p]").forEach(b=>b.addEventListener("click",()=>{const set=b.dataset.p==="all"?FAMILIES.map(f=>f[0]):PRESET_COMMON;
-      sh.querySelectorAll(".mk input").forEach(i=>i.checked=set.includes(i.value))}));
+      sh.querySelectorAll(".mkgrid .mk input").forEach(i=>i.checked=set.includes(i.value))}));
     sh.querySelector(".mX").addEventListener("click",()=>sh.remove());
-    sh.querySelector(".mSave").addEventListener("click",()=>{MK=new Set([...sh.querySelectorAll(".mk input:checked")].map(i=>i.value));
+    sh.querySelector(".mSave").addEventListener("click",()=>{MAINONLY=sh.querySelector("#mMain").checked;try{localStorage.setItem(LKEY,MAINONLY?"main":"all")}catch(e){}
+      MK=new Set([...sh.querySelectorAll(".mkgrid .mk input:checked")].map(i=>i.value));
       try{localStorage.setItem(MKEY,JSON.stringify([...MK]))}catch(e){}sh.remove();render()})};
   draw();sh.addEventListener("click",e=>{if(e.target===sh)sh.remove()});document.body.appendChild(sh)}
 
+/* ---------- MULTIPLE ---------- */
+const MU={k:3,band:"60-80",days:7,sort:"prob"};
+function legsFor(lg){const now=new Date();now.setHours(0,0,0,0);const lim=new Date(now);lim.setDate(lim.getDate()+MU.days);
+  const[lo,hi]=MU.band.split("-").map(x=>+x/100),hasBt=!!DATA.backtest;
+  return DATA.fixtures.filter(f=>f.league===lg&&!f.new_team.some(Boolean)&&new Date(f.date+"T12:00")>=now&&new Date(f.date+"T12:00")<lim).map(f=>{
+    const p=f.picks.filter(p=>avail(p)&&(!hasBt||p.reliability!=="red")&&p.prob>=lo&&p.prob<=hi).sort((a,b)=>b.prob-a.prob)[0];return p?{f,p}:null}).filter(Boolean)
+    .sort((a,b)=>b.p.prob-a.p.prob).slice(0,9)}
+function combos(arr,k){const out=[],rec=(st,acc)=>{if(acc.length===k){out.push(acc.slice());return}for(let i=st;i<arr.length;i++){acc.push(arr[i]);rec(i+1,acc);acc.pop()}};rec(0,[]);return out}
+function renderMulti(){
+  const el=$("multi"),F=filters(),lgs=[...new Set(DATA.fixtures.map(f=>f.league))].filter(l=>!F.league||l===F.league);
+  const seg=(k,opts)=>`<span class="seg" role="group">${opts.map(([v,l])=>`<button aria-pressed="${MU[k]===v}" data-mu="${k}" data-v="${v}">${l}</button>`).join("")}</span>`;
+  const blocks=lgs.map(lg=>{const legs=legsFor(lg);if(legs.length<MU.k)return"";
+    let cs=combos(legs,MU.k).map(c=>({c,prob:c.reduce((a,x)=>a*x.p.prob,1)}));
+    cs.sort(MU.sort==="prob"?(a,b)=>b.prob-a.prob:(a,b)=>a.prob-b.prob);
+    if(MU.sort==="odds")cs=cs.filter(x=>x.prob>=0.15);
+    cs=cs.slice(0,5);if(!cs.length)return"";
+    return`<h3>${esc(lg)}</h3>${cs.map((m,i)=>`<div class="mcard"><div class="mhead"><div>${ring(m.prob,true)}</div><div><div class="sheet-t" style="margin:0">Multipla da ${MU.k}</div>
+       <div class="vnums"><span>Probabilità <b>${(m.prob*100).toFixed(1)}%</b></span><span>Quota giusta <b>${(1/m.prob).toFixed(2)}</b></span></div></div></div>
+       ${m.c.map(x=>`<div class="mleg"><span class="pill">${pct(x.p.prob)}</span><div><b>${chipLabel(x.p)}</b><div class="note">${esc(x.f.home)}–${esc(x.f.away)} · ${x.f.date.slice(8)}/${x.f.date.slice(5,7)} ${esc(x.f.time||"")}</div></div></div>`).join("")}
+       <button class="playbtn" data-ml="${esc(lg)}" data-mi="${i}">+ La gioco</button></div>`).join("")}`}).join("");
+  el.innerHTML=`<div class="hero mh"><div><div class="hero-k">Multiple suggerite</div><div class="hero-v">2, 3 o 4 eventi</div><div class="hero-k">fino a 5 per campionato</div></div></div>
+   <div class="row toolbar">${seg("k",[[2,"Doppia"],[3,"Tripla"],[4,"Quadrupla"]])}${seg("band",[["60-80","Eventi 60–80%"],["50-75","50–75%"],["40-75","40–75%"]])}${seg("sort",[["prob","Più probabili"],["odds","Quota più alta"]])}${seg("days",[[3,"Weekend"],[7,"7 giorni"]])}</div>
+   <p class="note">Ogni evento viene da una partita diversa ed è la giocata più probabile di quella partita nella fascia scelta. "Quota più alta" mostra le multiple con quota maggiore tra quelle con almeno il 15% di probabilità. Attenzione: il margine del bookmaker si moltiplica a ogni evento, quindi gioca una multipla solo se la quota Bet365 supera la quota giusta.</p>
+   ${blocks||'<p class="empty">Non ci sono abbastanza partite nel periodo scelto per formare queste multiple.</p>'}`;
+  el.querySelectorAll("[data-mu]").forEach(b=>b.addEventListener("click",()=>{const k=b.dataset.mu;MU[k]=["k","days"].includes(k)?+b.dataset.v:b.dataset.v;renderMulti()}));
+  el.querySelectorAll("[data-ml]").forEach(b=>b.addEventListener("click",()=>{const lg=b.dataset.ml,legs=legsFor(lg);
+    let cs=combos(legs,MU.k).map(c=>({c,prob:c.reduce((a,x)=>a*x.p.prob,1)}));cs.sort(MU.sort==="prob"?(a,b)=>b.prob-a.prob:(a,b)=>a.prob-b.prob);if(MU.sort==="odds")cs=cs.filter(x=>x.prob>=0.15);
+    const m=cs[+b.dataset.mi];if(!m)return;const first=m.c.map(x=>x.f.date).sort()[0];
+    quickAdd({date:first,home:"Multipla",away:`${MU.k} eventi`,league:lg},{key:"multi",group:"Multipla",label:`Multipla ${MU.k}: `+m.c.map(x=>`${x.f.home}–${x.f.away} ${chipLabel(x.p)}`).join(" + "),
+      prob:m.prob,fair_odds:1/m.prob,odds:null,legs:m.c.map(x=>({home:x.f.home,away:x.f.away,date:x.f.date,def:DATA.mdefs[x.p.key],label:chipLabel(x.p)}))})}));
+}
+
 /* ---------- TOP DELLA SETTIMANA ---------- */
-const TOP={n:5,days:7,band:"50-75",gap:5,mine:false};
+const TOP={n:5,days:7,band:"40-75",mine:false,open:{}};
 const bandRange=()=>TOP.band.split("-").map(x=>+x/100);
 const STATKEY={"Gol":"goals","Calci d'angolo":"corners","Cartellini":"cards","Falli":"fouls","Tiri totali":"shots","Tiri in porta":"sot"};
 function why(f,p){
@@ -280,26 +333,27 @@ function renderTop(){
   const cards=DATA.fixtures.filter(f=>(!F.league||f.league===F.league)&&new Date(f.date+"T12:00")<lim&&!f.new_team.some(Boolean)).map(f=>{
     const ok=f.picks.filter(p=>avail(p)&&(!hasBt||p.reliability!=="red")&&p.prob>=bandRange()[0]&&p.prob<=bandRange()[1]&&(!TOP.mine||mine.has(p.group))).sort((a,b)=>b.prob-a.prob);
     if(!ok.length)return null;
-    const chosen=[ok[0]],groups=new Set([ok[0].group]);
-    for(const p of ok.slice(1)){if(chosen.length>=3)break;
-      if(ok[0].prob-p.prob<=TOP.gap/100&&!groups.has(p.group)){chosen.push(p);groups.add(p.group)}}
+    const chosen=[],fams=new Set();
+    for(const p of ok){if(chosen.length>=5)break;const fa=family(p.key)||p.key;if(fams.has(fa))continue;chosen.push(p);fams.add(fa)}
     return{f,picks:chosen}}).filter(Boolean).sort((a,b)=>b.picks[0].prob-a.picks[0].prob).slice(0,TOP.n);
   const seg=(k,opts)=>`<span class="seg" role="group">${opts.map(([v,l])=>`<button aria-pressed="${TOP[k]===v}" data-k="${k}" data-v="${v}">${l}</button>`).join("")}</span>`;
   const range=`${now.toLocaleDateString("it-IT",{day:"numeric",month:"short"})} – ${new Date(lim-864e5).toLocaleDateString("it-IT",{day:"numeric",month:"short"})}`;
   const nPicks=cards.reduce((a,c)=>a+c.picks.length,0);
   el.innerHTML=`<div class="hero"><div><div class="hero-k">Le giocate più probabili</div><div class="hero-v">${range}</div></div><div class="hero-n"><b>${nPicks}</b> giocate<br>${cards.length} partite</div></div>
-    <div class="row toolbar">${seg("n",[[3,"Top 3"],[4,"4"],[5,"5"]])}${seg("days",[[3,"Weekend"],[7,"7 giorni"]])}${seg("gap",[[5,"Scarto 5"],[10,"10"]])}
-    <span class="seg" role="group" aria-label="Fascia di probabilità">${[["50-75","50–75%"],["60-80","60–80%"],["50-85","50–85%"]].map(([v,l])=>`<button aria-pressed="${TOP.band===v}" data-band="${v}">${l}</button>`).join("")}</span>
+    <div class="row toolbar">${seg("n",[[3,"Top 3"],[4,"4"],[5,"5"]])}${seg("days",[[3,"Weekend"],[7,"7 giorni"]])}
+    <span class="seg" role="group" aria-label="Fascia di probabilità">${[["40-75","40–75%"],["50-75","50–75%"],["60-80","60–80%"]].map(([v,l])=>`<button aria-pressed="${TOP.band===v}" data-band="${v}">${l}</button>`).join("")}</span>
     <label class="row note" style="gap:6px"><input type="checkbox" id="topMine" ${TOP.mine?"checked":""} ${mine.size?"":"disabled"}> solo i miei mercati${mine.size?` (${[...mine].join(", ")})`:" (servono 30 giocate in attivo su un mercato)"}</label></div>
     ${cards.length?cards.map((c,i)=>`<article class="tc ${i===0?"first":""}">
       <div class="tc-head"><span class="rk">${i+1}</span><div><div class="tc-teams">${esc(c.f.home)} <span>vs</span> ${esc(c.f.away)}${c.f.big?'<span class="bigm">Big match</span>':""}</div>
       <div class="note">${esc(c.f.league)} · ${new Date(c.f.date+"T12:00").toLocaleDateString("it-IT",{weekday:"short",day:"numeric",month:"short"})} ${esc(c.f.time||"")}</div></div></div>
-      ${c.picks.map((p,k)=>`<div class="tp">${ring(p.prob,k===0)}<div><div class="tp-l">${chipLabel(p)}</div><div class="tp-w">${why(c.f,p)}</div><button class="playbtn" data-fi="${DATA.fixtures.indexOf(c.f)}" data-pk="${p.key}">+ La gioco</button> <button class="playbtn edit" data-efi="${DATA.fixtures.indexOf(c.f)}" data-epk="${p.key}">✎ Modifica</button></div></div>`).join("")}
+      ${c.picks.map((p,k)=>k===3&&!TOP.open[fid(c.f)]?`<button class="more" data-more="${esc(fid(c.f))}">Mostra altre ${c.picks.length-3} giocate ▾</button>`:k>=3&&!TOP.open[fid(c.f)]?"":`<div class="tp">${ring(p.prob,k===0)}<div><div class="tp-l">${chipLabel(p)}</div><div class="tp-w">${why(c.f,p)}</div><button class="playbtn" data-fi="${DATA.fixtures.indexOf(c.f)}" data-pk="${p.key}">+ La gioco</button> <button class="playbtn edit" data-efi="${DATA.fixtures.indexOf(c.f)}" data-epk="${p.key}">✎ Modifica</button></div></div>`).join("")}
+      ${TOP.open[fid(c.f)]&&c.picks.length>3?`<button class="more" data-more="${esc(fid(c.f))}">Mostra meno ▴</button>`:""}
     </article>`).join("")
     :'<p class="empty">Nessuna partita nel periodo scelto. Aggiorna i dati o allarga a 7 giorni.</p>'}
-    <p class="note">Mostra solo i mercati scelti in ⚙ Mercati. Per ogni partita la giocata più probabile, più fino a 2 alternative su mercati diversi solo se distano al massimo ${TOP.gap} punti. Solo mercati che nel backtest si sono dimostrati affidabili.</p>`;
+    <p class="note">Mostra solo i mercati scelti in ⚙ Mercati. Per ogni partita le 3 giocate più probabili nella fascia scelta, ognuna su un mercato diverso; con la tendina arrivi a 5. Solo mercati che nel backtest si sono dimostrati affidabili.</p>`;
   el.querySelectorAll("[data-k]").forEach(b=>b.addEventListener("click",()=>{TOP[b.dataset.k]=+b.dataset.v;renderTop()}));
   el.querySelectorAll("[data-band]").forEach(b=>b.addEventListener("click",()=>{TOP.band=b.dataset.band;renderTop()}));
+  el.querySelectorAll("[data-more]").forEach(b=>b.addEventListener("click",()=>{const k=b.dataset.more;TOP.open[k]=!TOP.open[k];renderTop()}));
   $("topMine").addEventListener("change",e=>{TOP.mine=e.target.checked;renderTop()});
   el.querySelectorAll(".playbtn:not(.edit)").forEach(b=>b.addEventListener("click",()=>{const f=DATA.fixtures[+b.dataset.fi];quickAdd(f,f.picks.find(p=>p.key===b.dataset.pk))}));
   el.querySelectorAll(".playbtn.edit").forEach(b=>b.addEventListener("click",()=>{const f=DATA.fixtures[+b.dataset.efi];anFromPick(f,f.picks.find(p=>p.key===b.dataset.epk))}));
@@ -328,7 +382,7 @@ function applyReferees(){const refs=loadRefs();
       f.picks.forEach(p=>{const d=DATA.mdefs?.[p.key];if(!d||d.stat!==st)return;
         const r0=probRaw(d,f.expected[st],f.alpha?.[st]||0,1),r1=probRaw(d,f.expected[st],f.alpha?.[st]||0,fac);
         p.prob=Math.min(.99,Math.max(.01,p.prob+r1-r0));p.fair_odds=1/p.prob;p.ref=true;
-        if(p.odds){p.edge=p.prob-p.implied;p.ev=p.prob*p.odds-1}})})})}
+        if(p.odds){p.edge=p.prob-p.implied;p.ev=p.prob*p.odds-1}})})});markMain()}
 function refPanel(f){const ref=loadRefs()[fid(f)]||{},ex=f.expected;
   const line=st=>ex[st]&&f.refx?.[st]?`<div>${STAT[st]} attesi: ${(ex[st][0]+ex[st][1]).toFixed(1)} → <b>${((ex[st][0]+ex[st][1])*f.refx[st]).toFixed(1)}</b></div>`:"";
   return`<div class="calc" style="border-color:var(--line)"><b>Arbitro</b> <span class="note">· media del campionato: ${f.lavg?.cards??"–"} cartellini, ${f.lavg?.fouls??"–"} falli</span>
@@ -338,6 +392,13 @@ function refPanel(f){const ref=loadRefs()[fid(f)]||{},ex=f.expected;
    <div class="res" style="font-size:1rem">${line("cards")}${line("fouls")}</div>
    <div class="row"><button class="btn rApply">Applica</button>${ref.cards||ref.fouls?'<button class="btn ghost rDel">Rimuovi</button>':""}</div>
    <p class="note" style="margin:6px 0 0">Più partite ha arbitrato, più conta la sua media. Con poche partite la correzione resta vicina alla media del campionato.</p></div>`}
+
+function scoreBlock(f){const S=f.scores,mx=Math.max(...S.grid.flat());
+  return`<h3>Risultati esatti più probabili</h3><div class="row" style="gap:6px">${S.top.map(([h,a,p],i)=>`<span class="chip"${i===0?' style="border-color:var(--turf)"':""}><b>${h}-${a}</b> ${(p*100).toFixed(1)}%</span>`).join("")}</div>
+  <details class="sgrid"><summary class="note">Mostra la matrice completa 0-0 → 5-5</summary>
+   <div class="scroll"><table class="heat"><tr><th>${esc(f.home)} ↓ / ${esc(f.away)} →</th>${[0,1,2,3,4,5].map(a=>`<th>${a}</th>`).join("")}</tr>
+   ${S.grid.map((row,h)=>`<tr><th>${h}</th>${row.map(v=>`<td style="background:color-mix(in srgb,var(--turf) ${Math.round(v/mx*85)}%,transparent);${v/mx>.55?"color:#fff":""}">${(v*100).toFixed(1)}</td>`).join("")}</tr>`).join("")}</table></div>
+   <p class="note">Anche il risultato più probabile esce raramente (di solito 10-13%): la matrice serve soprattutto a sommare le caselle, come fanno Over/Under, Multigol e Goal.</p></details>`}
 
 /* ---------- PARTITE ---------- */
 function renderMatches(){
@@ -379,6 +440,7 @@ function matchDetail(f,i){
   d.innerHTML=`${warn}
   <div class="row" style="margin:8px 0"><button class="btn ghost small anOpen">✎ Analizza una giocata su questa partita</button></div>
   ${f.expected.cards||f.expected.fouls?refPanel(f):""}
+  ${f.scores?scoreBlock(f):""}
   <h3>Confronto atteso</h3>
   <div class="row note" style="justify-content:space-between"><span>${esc(f.home)}</span><span>${esc(f.away)}</span></div>${butterfly(f)}
   <div class="grid2">
@@ -542,12 +604,18 @@ function outcomeJS(d,r){const h=r["h_"+d.stat],a=r["a_"+d.stat];if(h==null||a==n
   if(d.kind.endsWith("range")){const v=d.kind==="range"?h+a:d.kind==="home_range"?h:a;return d.args[0]<=v&&v<=d.args[1]}
   const[side,dir]=d.kind.split("_"),v=side==="total"?h+a:side==="home"?h:a;return dir==="over"?v>d.args[0]:v<d.args[0]}
 function autoSettle(){const list=loadDiary();let n=0;
-  for(const b of list){const D=b.def||DATA.mdefs?.[b.key];if(b.status!=="open"||!D)continue;
-    const t=new Date(b.date+"T12:00");
-    const r=(DATA.results||[]).find(x=>x.home===b.home&&x.away===b.away&&Math.abs(new Date(x.date+"T12:00")-t)<=10*864e5);
+  const find=(home,away,date,since)=>{const t=new Date(date+"T12:00").getTime(),s0=since?since-864e5:0;
+    return(DATA.results||[]).find(x=>{const d=new Date(x.date+"T12:00").getTime();return x.home===home&&x.away===away&&d>=t-2*864e5&&d<=t+10*864e5&&d>=s0})};
+  for(const b of list){if(b.status!=="open")continue;
+    if(b.legs){let lost=false,all=true;
+      for(const L of b.legs){if(L.won!=null){if(!L.won)lost=true;continue}
+        const r=find(L.home,L.away,L.date,b.id),w=r?outcomeJS(L.def,r):null;if(w==null){all=false;continue}L.won=w;L.result=`${r.h_goals}-${r.a_goals}`;if(!w)lost=true}
+      if(lost||all){b.status=lost?"lost":"won";b.auto=true;b.result=b.legs.map(L=>L.result||"?").join(" · ");n++}else n+=0;continue}
+    const D=b.def||DATA.mdefs?.[b.key];if(!D)continue;
+    const r=find(b.home,b.away,b.date,b.id);
     if(!r)continue;const w=outcomeJS(D,r);if(w==null)continue;
     b.status=w?"won":"lost";b.auto=true;b.result=`${r.h_goals}-${r.a_goals}`;n++}
-  if(n)saveDiary(list);return n}
+  saveDiary(list);return n}
 function renderHistory(){
   const el=$("history"),F=filters(),all=(DATA.history||[]).filter(h=>!F.league||h.league===F.league);
   const done=all.filter(h=>h.won!=null),pending=all.filter(h=>h.won==null&&!h.void);
@@ -580,7 +648,7 @@ function anDists(){
   const R=DATA.ratings?.[AN.league]?.[AN.stat];if(!R||!AN.home||!AN.away)return null;
   const g=(m,t,i)=>m[t]??R.prior[i];
   const big=R.top.includes(AN.home)&&R.top.includes(AN.away)?R.big:1,fx=anFixture(),fac=fx?.refx?.[AN.stat]||1;
-  const eh=R.mh*g(R.att,AN.home,0)*g(R.dfn,AN.away,1)*big*fac,ea=R.ma*g(R.att,AN.away,0)*g(R.dfn,AN.home,1)*big*fac;
+  const eh=R.mh*g(R.att,AN.home,0)*g(R.dfn,AN.away,1)*big*fac*(R.hf?.[AN.home]??1),ea=R.ma*g(R.att,AN.away,0)*g(R.dfn,AN.home,1)*big*fac*(R.af?.[AN.away]??1);
   const n=AN.stat==="goals"?10:["fouls","shots"].includes(AN.stat)?60:25;
   let ph=nbPmf(eh,R.alpha,n),pa=nbPmf(ea,R.alpha,n),joint=null,total;
   if(AN.stat==="goals"){joint=ph.map(x=>pa.map(y=>x*y));const r=R.rho||0;
@@ -693,7 +761,7 @@ function renderValue(){
   const el=$("value"),F=filters(),Q=loadQ(),hasBt=!!DATA.backtest,today=new Date();today.setHours(0,0,0,0);
   const rows=[];
   DATA.fixtures.filter(f=>(!F.league||f.league===F.league)&&!f.new_team.some(Boolean)&&new Date(f.date+"T23:59")>=today).forEach(f=>f.picks.forEach(p=>{
-    if(!avail(p)||p.prob<0.5||p.prob>0.9||(hasBt&&p.reliability==="red")||(F.group&&p.group!==F.group))return;
+    if(!avail(p)||p.prob<0.4||p.prob>0.8||(hasBt&&p.reliability==="red")||(F.group&&p.group!==F.group))return;
     const o=Q[pid(f,p)]??p.odds??null;rows.push({f,p,o,mine:Q[pid(f,p)]!=null})}));
   const calc=r=>r.o>1?{imp:1/r.o,edge:r.p.prob-1/r.o,ev:r.p.prob*r.o-1}:null;
   rows.forEach(r=>r.c=calc(r));
@@ -805,7 +873,7 @@ function quickAdd(f,p){
   q(".qX").addEventListener("click",close);sh.addEventListener("click",e=>{if(e.target===sh)close()});
   q(".qSave").addEventListener("click",()=>{const o=+q(".qO").value,s=+q(".qS").value,paper=q(".qP").checked;
     const l=loadDiary();l.push({id:Date.now(),date:f.date,match:`${f.home}–${f.away}`,home:f.home,away:f.away,key:p.key,league:f.league,market:chipLabel(p),group:p.group,prob:p.prob,
-      odds:o>1?o:null,stake:s>0?s:null,paper:paper||!(s>0),status:"open",def:p.def||null});
+      odds:o>1?o:null,stake:s>0?s:null,paper:paper||!(s>0),status:"open",def:p.def||null,legs:p.legs||null});
     if(saveDiary(l)){q(".sheet").innerHTML='<div class="grab"></div><div class="sheet-t">✓ Registrata nel diario</div><p class="note">Si chiuderà da sola come vinta o persa appena c\'è il risultato.</p>';setTimeout(close,1300)}
     else q(".qR").innerHTML='<span class="neg">Impossibile salvare: il browser blocca la memoria locale.</span>'});
   setTimeout(()=>q(".qO")?.focus(),50);
@@ -919,9 +987,10 @@ function render(){$("vProb").textContent=$("fProb").value+"%";$("vMax").textCont
   $("filters").hidden=tab==="diary";
   if(tab==="top"){document.querySelectorAll("#filters label").forEach((l,k)=>l.hidden=k!==0);renderTop();return}
   if(tab==="analyze"){$("filters").hidden=true;renderAnalyze();return}
+  if(tab==="multi"){document.querySelectorAll("#filters label").forEach((l,k)=>l.hidden=k!==0);renderMulti();return}
   if(tab==="value"){document.querySelectorAll("#filters label").forEach((l,k)=>l.hidden=k>1);renderValue();return}
   document.querySelectorAll("#filters label").forEach((l,k)=>l.hidden=!((k===0&&tab!=="reliability")||pickTab||(tab==="reliability"&&k===1)));
-  ({top:renderTop,value:renderValue,analyze:renderAnalyze,matches:renderMatches,teams:renderTeams,leagues:renderLeagues,best:renderBest,reliability:renderReliability,history:renderHistory,diary:renderDiary})[tab]()}
+  ({top:renderTop,multi:renderMulti,value:renderValue,analyze:renderAnalyze,matches:renderMatches,teams:renderTeams,leagues:renderLeagues,best:renderBest,reliability:renderReliability,history:renderHistory,diary:renderDiary})[tab]()}
 document.querySelectorAll("nav button").forEach(b=>b.addEventListener("click",()=>{
   tab=b.dataset.tab;document.querySelectorAll("nav button").forEach(x=>x.setAttribute("aria-selected",x===b));
   document.querySelectorAll("main section").forEach(s=>s.hidden=s.id!==tab);render()}));
