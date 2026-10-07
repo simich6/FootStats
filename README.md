@@ -24,9 +24,15 @@ impostazioni sulle due stagioni concluse più recenti e tiene quella con le stim
 
 ## Cosa trovi nella dashboard
 
+- **⚙ Mercati** (in alto): scegli i mercati che trovi sul tuo bookmaker; l'app propone solo quelli.
 - **Top della settimana** (pagina iniziale): le 3, 4 o 5 giocate più probabili del weekend o dei prossimi
   7 giorni. Per ogni partita la più probabile più fino a 2 alternative (su mercati diversi)
   se distano al massimo 5 o 10 punti. Solo mercati affidabili, con il motivo in una riga.
+- **Analizza**: componi qualsiasi giocata (partita, statistica, Casa/Ospite/Partita, Over/Under/Multigol/Esito, linea)
+  e vedi probabilità, quota giusta, altre linee, distribuzione, ultime 10 e valore rispetto alla quota.
+  Dal Top, "✎ Modifica" apre la giocata proposta per cambiarla.
+- **Valore**: scrivi la quota Bet365 accanto alle giocate: l'app calcola probabilità implicita, edge ed EV
+  e mette in cima le quote che sembrano sbagliate.
 - **Partite**: barra 1X2, confronto atteso tra le squadre, grafico della distribuzione
   (es. probabilità di 8, 9, 10 corner), serie delle ultime 10 rispetto a una linea, andamento fatti/subiti.
 - **Squadre**: forma, medie casa/trasferta, frequenze Over/Goal sulle ultime 10 e 20, trend con media mobile.
@@ -34,9 +40,15 @@ impostazioni sulle due stagioni concluse più recenti e tiene quella con le stim
 - **Migliori giocate**: elenco filtrabile per campionato, mercato, probabilità e affidabilità.
 - **Affidabilità**: dove il modello aiuta, calibrazione, confronto con la precisione dei bookmaker,
   profitto simulato delle giocate con valore.
-- **Diario**: tocca una giocata, inserisci la quota di Eurobet/Admiral e vedi subito se conviene.
-  Salvala e segna l'esito: il diario calcola profitto, ROI e se vinci quanto previsto dal modello.
-  Con la gestione cassa suggerisce la puntata e avvisa quando superi il limite di perdita mensile.
+- **Arbitro**: nel dettaglio partita inserisci la media cartellini (e falli) dell'arbitro designato:
+  le probabilità di cartellini e falli si ricalcolano subito, anche nel Top.
+- **Storico**: ogni giorno salva le giocate del Top e, a partita finita, controlla da solo se sono uscite.
+  Confronta le percentuali previste con quelle uscite davvero.
+- **Il mio diario**: dal Top tocca "+ La gioco" (quota e puntata facoltative, anche solo "sulla carta").
+  Le giocate si chiudono da sole a risultato disponibile. Profitto, ROI, grafico, risultati per mercato,
+  probabilità e campionato, consigli personalizzati, gestione cassa e backup (Esporta/Importa).
+  Il diario include il registro (scaricabile in CSV) e la verifica "Edge o fortuna?" dopo 100-200 giocate.
+  Nel Top, "solo i miei mercati" mostra i mercati dove sei in attivo (dopo 30 giocate).
 
 La **quota giusta** è 1 / probabilità. Se Eurobet o Admiral pagano di più, secondo il modello
 la giocata ha valore. Il pallino colorato indica quanto quel mercato è stato prevedibile nel backtest.

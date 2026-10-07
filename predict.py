@@ -116,3 +116,21 @@ def league_trends(matches: pd.DataFrame) -> dict:
             }
         out[config.LEAGUES[league]] = info
     return out
+
+
+def export_ratings(matches: pd.DataFrame) -> dict:
+    """Parametri del modello per ogni campionato: servono alla dashboard per analizzare
+    qualsiasi giocata (linea, squadra, partita) anche non presente nell'elenco."""
+    today = pd.Timestamp.today().normalize()
+    out = {}
+    for league, hist in matches.groupby("league"):
+        ratings = model.fit_all(hist, today + pd.Timedelta(days=1))
+        if "goals" not in ratings:
+            continue
+        out[config.LEAGUES[league]] = {
+            s: {"mh": round(r.mu_home, 4), "ma": round(r.mu_away, 4), "alpha": round(r.alpha, 4),
+                "rho": round(r.rho, 3), "big": round(r.big, 4), "top": sorted(r.top),
+                "prior": list(model.NEW_TEAM_PRIOR[s]),
+                "att": {t: round(v, 4) for t, v in r.att.items()}, "dfn": {t: round(v, 4) for t, v in r.dfn.items()}}
+            for s, r in ratings.items()}
+    return out

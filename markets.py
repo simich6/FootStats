@@ -32,6 +32,15 @@ MARKETS = [
     _m("MG13", "Gol", "Multigol 1-3", "goals", "range", 1, 3),
     _m("MG23", "Gol", "Multigol 2-3", "goals", "range", 2, 3),
     _m("MG24", "Gol", "Multigol 2-4", "goals", "range", 2, 4),
+    _m("MG14", "Gol", "Multigol 1-4", "goals", "range", 1, 4),
+    _m("MG25", "Gol", "Multigol 2-5", "goals", "range", 2, 5),
+    _m("MG35", "Gol", "Multigol 3-5", "goals", "range", 3, 5),
+    _m("MGH12", "Gol", "Multigol Casa 1-2", "goals", "home_range", 1, 2),
+    _m("MGH13", "Gol", "Multigol Casa 1-3", "goals", "home_range", 1, 3),
+    _m("MGH23", "Gol", "Multigol Casa 2-3", "goals", "home_range", 2, 3),
+    _m("MGA12", "Gol", "Multigol Ospite 1-2", "goals", "away_range", 1, 2),
+    _m("MGA13", "Gol", "Multigol Ospite 1-3", "goals", "away_range", 1, 3),
+    _m("MGA23", "Gol", "Multigol Ospite 2-3", "goals", "away_range", 2, 3),
     *_ou("goals", [0.5, 1.5], "home"),
     *_ou("goals", [0.5, 1.5], "away"),
     *_ou("corners", [6.5, 7.5, 8.5, 9.5, 10.5, 11.5, 12.5]),
@@ -64,8 +73,9 @@ def probability(m: dict, dist: dict) -> float | None:
             return float(sum(parts[c] for c in args[0]))
         yes = joint[1:, 1:].sum()
         return float(yes if args[0] else 1 - yes)
-    if kind == "range":
-        return float(d["total"][args[0]: args[1] + 1].sum())
+    if kind in ("range", "home_range", "away_range"):
+        p = {"range": d["total"], "home_range": d["ph"], "away_range": d["pa"]}[kind]
+        return float(p[args[0]: args[1] + 1].sum())
     side, direction = kind.split("_")
     p = {"total": d["total"], "home": d["ph"], "away": d["pa"]}[side]
     over = p[int(np.floor(args[0])) + 1:].sum()
@@ -83,8 +93,9 @@ def outcome(m: dict, row) -> float:
         return float(res in args[0])
     if kind == "btts":
         return float((h > 0 and a > 0) == args[0])
-    if kind == "range":
-        return float(args[0] <= h + a <= args[1])
+    if kind in ("range", "home_range", "away_range"):
+        v = {"range": h + a, "home_range": h, "away_range": a}[kind]
+        return float(args[0] <= v <= args[1])
     side, direction = kind.split("_")
     v = {"total": h + a, "home": h, "away": a}[side]
     return float(v > args[0]) if direction == "over" else float(v < args[0])
