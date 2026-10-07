@@ -14,7 +14,7 @@ import config
 import markets as mk
 
 MDEF = {m["key"]: m for m in mk.MARKETS}
-LO, HI, GAP = 0.50, 0.75, 0.05  # stesse regole del Top della settimana (fascia predefinita 50-75%)
+LO, HI, GAP = 0.40, 0.75, 1.0  # stesse regole del Top della settimana (fascia predefinita 50-75%)
 
 
 def top_candidates(preds: list[dict], has_backtest: bool) -> list[dict]:

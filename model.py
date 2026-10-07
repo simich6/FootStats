@@ -33,6 +33,8 @@ class Ratings:
     rho: float = 0.0  # correzione Dixon-Coles (solo gol): risultati bassi e pareggi
     big: float = 1.0  # moltiplicatore nei big match (stimato dai dati)
     top: frozenset = frozenset()
+    hf: dict | None = None  # rendimento della squadra in casa rispetto alla sua forza media
+    af: dict | None = None  # rendimento della squadra in trasferta
 
     def is_big(self, home, away):
         return home in self.top and away in self.top
@@ -46,7 +48,9 @@ class Ratings:
         ah, dh = self.team(home)
         aa, da = self.team(away)
         f = self.big if self.is_big(home, away) else 1.0
-        return self.mu_home * ah * da * f, self.mu_away * aa * dh * f
+        fh = self.hf.get(home, 1.0) if self.hf else 1.0
+        fa = self.af.get(away, 1.0) if self.af else 1.0
+        return self.mu_home * ah * da * f * fh, self.mu_away * aa * dh * f * fa
 
 
 def fit_ratings(hist: pd.DataFrame, ref_date: pd.Timestamp, stat: str, top: frozenset = frozenset()) -> Ratings | None:
@@ -99,7 +103,22 @@ def fit_ratings(hist: pd.DataFrame, ref_date: pd.Timestamp, stat: str, top: froz
         exp = np.sum(w[mask] * (eh[mask] + ea[mask]))
         big = float(np.clip((obs + prior) / (exp + prior), 0.8, 1.2))
 
-    return Ratings(stat, mu_h, mu_a, dict(zip(teams, att)), dict(zip(teams, dfn)), alpha, rho, big, top)
+    hf = af = None
+    if config.TEAM_HOME_AWAY:
+        # Quanto la squadra produce in casa (e fuori) rispetto a quanto direbbe la sua forza media.
+        # Con poche partite il fattore resta vicino a 1: HA_SHRINK partite "normali" fanno da zavorra.
+        eh, ea = mu_h * att[ih] * dfn[ia], mu_a * att[ia] * dfn[ih]
+        ks = config.HA_SHRINK
+        obs_h, exp_h = np.bincount(ih, w * yh, n), np.bincount(ih, w * eh, n)
+        obs_a, exp_a = np.bincount(ia, w * ya, n), np.bincount(ia, w * ea, n)
+        cnt_h, cnt_a = np.bincount(ih, w, n), np.bincount(ia, w, n)
+        rh = (obs_h + ks * exp_h / np.maximum(cnt_h, 1e-9)) / (exp_h + ks * exp_h / np.maximum(cnt_h, 1e-9))
+        ra = (obs_a + ks * exp_a / np.maximum(cnt_a, 1e-9)) / (exp_a + ks * exp_a / np.maximum(cnt_a, 1e-9))
+        rh, ra = np.nan_to_num(rh, nan=1.0), np.nan_to_num(ra, nan=1.0)
+        hf = dict(zip(teams, np.clip(rh, 0.8, 1.25)))
+        af = dict(zip(teams, np.clip(ra, 0.8, 1.25)))
+
+    return Ratings(stat, mu_h, mu_a, dict(zip(teams, att)), dict(zip(teams, dfn)), alpha, rho, big, top, hf, af)
 
 
 def _tau(x, y, lh, la, rho):
@@ -121,7 +140,19 @@ def fit_all(hist: pd.DataFrame, ref_date: pd.Timestamp) -> dict:
         active = set(recent["home"]) | set(recent["away"])
         strength = {t: first.att[t] / first.dfn[t] for t in first.att if t in active}
         top = frozenset(sorted(strength, key=strength.get, reverse=True)[:config.TOP_N])
-    return {s: r for s in STATS if (r := fit_ratings(hist, ref_date, s, top)) is not None}
+    out = {s: r for s in STATS if (r := fit_ratings(hist, ref_date, s, top)) is not None}
+    b = config.SOT_BLEND
+    if b > 0 and "goals" in out and "sot" in out:
+        # "xG approssimato": i tiri in porta sono meno rumorosi dei gol; la forza offensiva/difensiva
+        # sui gol diventa una media (geometrica) tra quella da gol e quella da tiri in porta.
+        g, t = out["goals"], out["sot"]
+        for name in g.att:
+            if name in t.att:
+                g.att[name] = g.att[name] ** (1 - b) * t.att[name] ** b
+                g.dfn[name] = g.dfn[name] ** (1 - b) * t.dfn[name] ** b
+        m = np.exp(np.mean(np.log(list(g.dfn.values()))))
+        g.dfn = {k: v / m for k, v in g.dfn.items()}
+    return out
 
 def pmf(lam: float, alpha: float, nmax: int) -> np.ndarray:
     k = np.arange(nmax + 1)

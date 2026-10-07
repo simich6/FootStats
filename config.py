@@ -34,7 +34,10 @@ MIN_HISTORY = 120        # partite minime di campionato prima di iniziare a prev
 DIXON_COLES = True       # corregge la sottostima di pareggi e risultati bassi
 BIG_MATCH = True         # correzione per le partite tra squadre di vertice
 TOP_N = 6                # squadre considerate "di vertice" in ogni campionato
-PARAMS_VERSION = 4       # se cambia, la taratura viene rifatta automaticamente
+TEAM_HOME_AWAY = True    # rendimento casa/trasferta specifico di ogni squadra (con correzione prudente)
+HA_SHRINK = 15.0         # "partite fittizie" verso il vantaggio casalingo medio del campionato
+SOT_BLEND = 0.3          # quota della forza gol ricavata dai tiri in porta ("xG approssimato"); 0 = solo gol
+PARAMS_VERSION = 5       # se cambia, la taratura viene rifatta automaticamente
 
 # Backtest e valore
 BACKTEST_SEASONS = 3     # ultime stagioni simulate (walk-forward)

@@ -20,6 +20,17 @@ def _confidence(market_row: dict | None, n_home: int, n_away: int) -> float:
     return round(float(10 * (0.6 * market_score + 0.4 * data_score)), 1)
 
 
+def _scores(d, n: int = 6) -> dict | None:
+    """Matrice dei risultati esatti 0-0 -> 5-5 e i più probabili."""
+    if not d:
+        return None
+    j = d["joint"] if "joint" in d else np.outer(d["ph"], d["pa"])
+    m = j[:6, :6]
+    order = np.dstack(np.unravel_index(np.argsort(-m, axis=None), m.shape))[0][:n]
+    return {"grid": [[round(float(v), 4) for v in row] for row in m],
+            "top": [[int(i), int(k), round(float(m[i, k]), 4)] for i, k in order]}
+
+
 def _trim(p: np.ndarray, mass: float = 0.998) -> list[float]:
     """Distribuzione del totale, tagliata dove la probabilità residua diventa trascurabile."""
     cut = int(np.searchsorted(np.cumsum(p), mass)) + 1
@@ -68,6 +79,7 @@ def predict_fixtures(matches: pd.DataFrame, fixtures: pd.DataFrame, bt: dict | N
                 "alpha": {s: round(r.alpha, 4) for s, r in ratings.items()},
                 "lavg": {s: round(r.mu_home + r.mu_away, 2) for s, r in ratings.items()},
                 "dist": {s: _trim(d["total"]) for s, d in dist.items()},
+                "scores": _scores(dist.get("goals")),
                 "picks": picks,
             })
     return out
@@ -131,6 +143,8 @@ def export_ratings(matches: pd.DataFrame) -> dict:
             s: {"mh": round(r.mu_home, 4), "ma": round(r.mu_away, 4), "alpha": round(r.alpha, 4),
                 "rho": round(r.rho, 3), "big": round(r.big, 4), "top": sorted(r.top),
                 "prior": list(model.NEW_TEAM_PRIOR[s]),
-                "att": {t: round(v, 4) for t, v in r.att.items()}, "dfn": {t: round(v, 4) for t, v in r.dfn.items()}}
+                "att": {t: round(v, 4) for t, v in r.att.items()}, "dfn": {t: round(v, 4) for t, v in r.dfn.items()},
+                "hf": {t: round(float(v), 4) for t, v in (r.hf or {}).items()},
+                "af": {t: round(float(v), 4) for t, v in (r.af or {}).items()}}
             for s, r in ratings.items()}
     return out

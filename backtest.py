@@ -184,21 +184,38 @@ def tune(matches: pd.DataFrame) -> dict:
     Usa le due stagioni concluse più recenti; la stagione in corso resta fuori."""
     seasons = sorted(matches["season"].unique())
     test = seasons[-3:-1] if len(seasons) >= 4 else seasons[-2:]
-    def score(hl, dc, bm):
+    def score(hl, dc, bm, ha=False, sb=0.0):
         config.HALF_LIFE_DAYS, config.DIXON_COLES, config.BIG_MATCH = hl, dc, bm
+        config.TEAM_HOME_AWAY, config.SOT_BLEND = ha, sb
         bt = walk_forward(matches, test, quiet=True)
         p = bt["prob"].clip(1e-6, 1 - 1e-6)
         ll = float(-np.mean(bt["won"] * np.log(p) + (1 - bt["won"]) * np.log(1 - p)))
         yn = lambda x: "sì" if x else "no"
-        print(f"  memoria {hl} giorni, Dixon-Coles {yn(dc)}, big match {yn(bm)}: log loss {ll:.5f}")
+        print(f"  memoria {hl} giorni, Dixon-Coles {yn(dc)}, big match {yn(bm)}, casa/trasf. squadra {yn(ha)}, "
+              f"tiri in porta {int(sb*100)}%: log loss {ll:.5f}")
         return ll
 
     # 1) memoria e Dixon-Coles, 2) big match acceso/spento con le impostazioni migliori
     _, hl, dc = min((score(hl, dc, False), hl, dc) for hl in (90, 150, 240) for dc in (True, False))
-    off, on = score(hl, dc, False), score(hl, dc, True)
-    bm = on < off
-    params = {"HALF_LIFE_DAYS": hl, "DIXON_COLES": dc, "BIG_MATCH": bm, "PARAMS_VERSION": config.PARAMS_VERSION}
+    # 2) ogni miglioria resta accesa solo se migliora davvero le previsioni
+    best = score(hl, dc, False)
+    on = score(hl, dc, True)
+    bm = on < best
+    best = min(best, on)
+    on = score(hl, dc, bm, True)
+    ha = on < best
+    best = min(best, on)
+    sb = 0.0
+    for cand in (0.3, 0.5):
+        v = score(hl, dc, bm, ha, cand)
+        if v < best:
+            best, sb = v, cand
+    params = {"HALF_LIFE_DAYS": hl, "DIXON_COLES": dc, "BIG_MATCH": bm, "TEAM_HOME_AWAY": ha, "SOT_BLEND": sb,
+              "PARAMS_VERSION": config.PARAMS_VERSION}
     config.HALF_LIFE_DAYS, config.DIXON_COLES, config.BIG_MATCH = hl, dc, bm
+    config.TEAM_HOME_AWAY, config.SOT_BLEND = ha, sb
     config.PARAMS_PATH.write_text(json.dumps(params))
-    print(f"  scelto: memoria {hl} giorni, Dixon-Coles {'sì' if dc else 'no'}, big match {'sì' if bm else 'no'}")
+    yn = lambda x: "sì" if x else "no"
+    print(f"  scelto: memoria {hl} giorni, Dixon-Coles {yn(dc)}, big match {yn(bm)}, "
+          f"casa/trasferta per squadra {yn(ha)}, tiri in porta {int(sb*100)}%")
     return params
