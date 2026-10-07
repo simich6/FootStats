@@ -4,6 +4,8 @@ from abc import ABC, abstractmethod
 
 import pandas as pd
 
+import calendario
+import config
 import data
 
 
@@ -31,5 +33,8 @@ class FootballDataCoUkProvider(FootballDataProvider):
     def matches(self):
         return data.build_database()
 
-    def fixtures(self):
-        return data.load_fixtures()
+    def fixtures(self, matches=None):
+        fx = data.load_fixtures()
+        if matches is not None:
+            fx = calendario.merge(fx, calendario.fetch(matches, config.LEAGUES))
+        return fx

@@ -42,7 +42,7 @@ def main():
         print("3/4 Backtest: uso quello salvato (--backtest per rifarlo)")
 
     print("4/4 Previsioni e dashboard")
-    fixtures = provider.fixtures()
+    fixtures = provider.fixtures(matches)
     preds = predict.predict_fixtures(matches, fixtures, bt) if len(fixtures) else []
     trends = predict.team_trends(matches)
     leagues = predict.league_trends(matches)
@@ -54,7 +54,8 @@ def main():
     print(f"    storico: {len(hist)} previsioni, {len(done)} verificate")
     import report
     path = report.build(preds, trends, leagues, bt, history=hist,
-                        results=history.recent_results(matches), mdefs=history.market_defs())
+                        results=history.recent_results(matches), mdefs=history.market_defs(),
+                        ratings=predict.export_ratings(matches))
     print(f"\nFatto. Apri {path} nel browser.")
 
 
