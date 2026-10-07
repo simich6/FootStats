@@ -30,6 +30,8 @@ jobs:
           restore-keys: footstats-data-
       - run: pip install pandas numpy scipy requests
       - name: Aggiorna dati e dashboard
+        env:
+          FOOTBALL_DATA_ORG_KEY: ${{ secrets.FOOTBALL_DATA_ORG_KEY }}
         run: |
           if [ ! -f data/params.json ]; then python run.py --tune
           elif [ "$(date +%u)" = "1" ]; then python run.py --backtest
