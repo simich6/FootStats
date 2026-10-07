@@ -400,6 +400,38 @@ function scoreBlock(f){const S=f.scores,mx=Math.max(...S.grid.flat());
    ${S.grid.map((row,h)=>`<tr><th>${h}</th>${row.map(v=>`<td style="background:color-mix(in srgb,var(--turf) ${Math.round(v/mx*85)}%,transparent);${v/mx>.55?"color:#fff":""}">${(v*100).toFixed(1)}</td>`).join("")}</tr>`).join("")}</table></div>
    <p class="note">Anche il risultato più probabile esce raramente (di solito 10-13%): la matrice serve soprattutto a sommare le caselle, come fanno Over/Under, Multigol e Goal.</p></details>`}
 
+function aiPrompt(f,question){
+  const avg=(t,s,k)=>{const v=games(t).slice(-10).map(g=>g[s]?.[k]).filter(x=>x!=null);return v.length?(v.reduce((a,b)=>a+b,0)/v.length).toFixed(1):"–"};
+  const ex=Object.entries(f.expected).map(([s,[h,a]])=>`- ${STAT[s]}: ${f.home} ${h} · ${f.away} ${a}`).join("\n");
+  const last=["goals","sot","shots","corners","fouls","cards"].map(s=>`- ${STAT[s]} fatti/subiti, ultime 10: ${f.home} ${avg(f.home,s,0)}/${avg(f.home,s,1)} · ${f.away} ${avg(f.away,s,0)}/${avg(f.away,s,1)}`).join("\n");
+  const top=f.picks.filter(p=>p.prob>=0.4&&p.prob<=0.8).sort((a,b)=>b.prob-a.prob).slice(0,8).map(p=>`- ${chipLabel(p)}: ${(p.prob*100).toFixed(0)}% (quota giusta ${p.fair_odds.toFixed(2)})`).join("\n");
+  return`Partita: ${f.home} – ${f.away} (${f.league}), ${f.date} ${f.time||""}
+
+Dati del mio modello Footstats (valori attesi per la partita):
+${ex}
+
+Medie reali:
+${last}
+
+Giocate più probabili secondo il modello:
+${top}
+
+La mia domanda: ${question||"…"}
+
+Cerca online le formazioni probabili, gli assenti e le statistiche stagionali dei giocatori coinvolti (tiri, tiri in porta, minuti, falli fatti e subiti). Combinale con i dati del modello qui sopra e dimmi una probabilità stimata, la quota minima per giocarla e quanto sei sicuro, spiegando in breve.`}
+function askSheet(f){const sh=document.createElement("div");sh.className="sheet-bg";
+  sh.innerHTML=`<div class="sheet" role="dialog" aria-label="Chiedi a Claude"><div class="grab"></div>
+    <div class="sheet-t">Chiedi a Claude</div>
+    <p class="note">Scrivi la domanda: l'app prepara un messaggio con tutti i dati del modello su ${esc(f.home)}–${esc(f.away)}. Incollalo in una chat con Claude: cercherà online formazioni e statistiche dei giocatori.</p>
+    <textarea class="aQ" rows="3" style="width:100%;font:inherit;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink)" placeholder="es. Conviene 1+ tiri in porta del centravanti di casa?"></textarea>
+    <div class="row" style="margin-top:8px"><button class="btn aCopy">Copia il messaggio</button><button class="btn ghost aX">Chiudi</button></div>
+    <div class="aR note" aria-live="polite" style="margin-top:8px"></div></div>`;
+  document.body.appendChild(sh);const q=c=>sh.querySelector(c);
+  q(".aX").addEventListener("click",()=>sh.remove());sh.addEventListener("click",e=>{if(e.target===sh)sh.remove()});
+  q(".aCopy").addEventListener("click",async()=>{const txt=aiPrompt(f,q(".aQ").value.trim());
+    try{await navigator.clipboard.writeText(txt);q(".aR").innerHTML='<span class="pos">Copiato.</span> Apri l\'app Claude, incolla e invia.'}
+    catch(e){q(".aR").innerHTML='Copia a mano il testo qui sotto:<textarea rows="8" style="width:100%;margin-top:6px">'+esc(txt)+'</textarea>'}})}
+
 /* ---------- PARTITE ---------- */
 function renderMatches(){
   const F=filters(),el=$("matches");el.innerHTML="";
@@ -436,9 +468,9 @@ function matchDetail(f,i){
   const warn=f.new_team.some(Boolean)?'<p class="note">Una delle squadre non ha partite recenti nel campionato (neopromossa): stime meno affidabili.</p>':"";
   const stats=Object.keys(STAT).filter(s=>f.dist?.[s]);
   const byGroup={};f.picks.filter(avail).forEach(p=>(byGroup[p.group]??=[]).push(p));
-  const rows=Object.entries(byGroup).map(([g,ps])=>`<tr><th colspan="5" style="text-align:left">${g}</th></tr>`+ps.map(p=>`<tr class="pick ${p.edge>0.03?"value-row":""}" data-key="${p.key}" tabindex="0"><td><span class="dot ${p.reliability}"></span>${p.label}${p.ref?' <span class="note">(arbitro)</span>':""}</td><td>${pct(p.prob)}</td><td>${p.fair_odds.toFixed(2)}</td><td>${p.odds?p.odds.toFixed(2):"–"}</td><td class="${p.edge>0?"pos":"neg"}">${p.edge!=null?(p.edge>0?"+":"")+(p.edge*100).toFixed(1):"–"}</td></tr>`).join("")).join("");
+  const rows=Object.entries(byGroup).map(([g,ps])=>`<tr><th colspan="5" style="text-align:left">${g}</th></tr>`+ps.map(p=>`<tr class="pick ${p.edge>0.03?"value-row":""}" data-key="${p.key}" tabindex="0"><td><span class="dot ${p.reliability}"></span>${p.label}${p.ref?' <span class="note">(arbitro)</span>':""}${p.adj?` <span class="note">(${p.adj>0?"+":""}${(p.adj*100).toFixed(1)} adattivo)</span>`:""}</td><td>${pct(p.prob)}</td><td>${p.fair_odds.toFixed(2)}</td><td>${p.odds?p.odds.toFixed(2):"–"}</td><td class="${p.edge>0?"pos":"neg"}">${p.edge!=null?(p.edge>0?"+":"")+(p.edge*100).toFixed(1):"–"}</td></tr>`).join("")).join("");
   d.innerHTML=`${warn}
-  <div class="row" style="margin:8px 0"><button class="btn ghost small anOpen">✎ Analizza una giocata su questa partita</button></div>
+  <div class="row" style="margin:8px 0"><button class="btn ghost small anOpen">✎ Analizza una giocata su questa partita</button><button class="btn ghost small askAI">💬 Chiedi a Claude</button></div>
   ${f.expected.cards||f.expected.fouls?refPanel(f):""}
   ${f.scores?scoreBlock(f):""}
   <h3>Confronto atteso</h3>
@@ -458,6 +490,7 @@ function matchDetail(f,i){
   <h3>Tutte le giocate</h3><div class="scroll"><table><tr><th>Giocata</th><th>Prob.</th><th>Quota giusta</th><th>Quota</th><th>Vantaggio</th></tr>${rows}</table></div>
   <p class="note">Tocca una giocata per inserire la quota del tuo bookmaker e salvarla nel diario.</p>`;
   const q=c=>d.querySelector(c);
+  q(".askAI")?.addEventListener("click",()=>askSheet(f));
   q(".anOpen")?.addEventListener("click",()=>{AN.league=f.league;AN.home=f.home;AN.away=f.away;AN.date=f.date;document.querySelector('nav button[data-tab="analyze"]').click()});
   const reopen=()=>{applyReferees();const nd=matchDetail(f,i);d.replaceWith(nd)};
   q(".rApply")?.addEventListener("click",()=>{const r=loadRefs(),c=+q(".rC").value,fo=+q(".rF").value,n=+q(".rN").value;
@@ -619,12 +652,16 @@ function autoSettle(){const list=loadDiary();let n=0;
 function renderHistory(){
   const el=$("history"),F=filters(),all=(DATA.history||[]).filter(h=>!F.league||h.league===F.league);
   const done=all.filter(h=>h.won!=null),pending=all.filter(h=>h.won==null&&!h.void);
-  if(!all.length){el.innerHTML='<p class="empty">Lo storico parte da oggi: ogni giorno vengono salvate le giocate del Top e, a partita finita, verificate in automatico. Torna dopo il prossimo turno di campionato.</p>';return}
+  const AD=Object.entries(DATA.adapt||{}).sort((a,b)=>b[1].n-a[1].n);
+  const adaptPanel=`<div class="panel"><h3 style="margin-top:0">Apprendimento adattivo</h3>
+    <p class="note">Per ogni mercato l'app confronta quanto prevedeva e quanto è uscito davvero nelle giocate che ha proposto. Dopo 50 previsioni verificate corregge da sola le percentuali future: se il modello era troppo sicuro le rende più prudenti, se era troppo cauto più decise. La correzione cresce man mano che i dati aumentano.</p>
+    ${AD.length?`<div class="scroll"><table><tr><th>Mercato</th><th>Verificate</th><th>Previsto</th><th>Uscito</th><th>Correzione</th></tr>${AD.map(([g,a])=>`<tr><td>${esc(g)}</td><td>${a.n}${a.active?"":` <span class="note">/50</span>`}</td><td>${pct(a.pred)}</td><td>${pct(a.hit)}</td><td>${!a.active?'<span class="note">in raccolta</span>':Math.abs(a.k-1)<0.01?"nessuna":a.k<1?`più prudente (×${a.k.toFixed(2)})`:`più decisa (×${a.k.toFixed(2)})`}</td></tr>`).join("")}</table></div>`:'<p class="note">Nessuna previsione verificata ancora.</p>'}</div>`;
+  if(!all.length){el.innerHTML='<p class="empty">Lo storico parte da oggi: ogni giorno vengono salvate le giocate del Top e, a partita finita, verificate in automatico. Torna dopo il prossimo turno di campionato.</p>'+adaptPanel;return}
   const rate=a=>a.length?a.filter(h=>h.won).length/a.length:0,avgp=a=>a.length?a.reduce((x,h)=>x+h.prob,0)/a.length:0;
   const main=done.filter(h=>h.main);
   const bands=[[.5,.6],[.6,.65],[.65,.7],[.7,.75],[.75,.8],[.8,.86]].map(([lo,hi])=>{const b=done.filter(h=>h.prob>=lo&&h.prob<hi);return{l:`${Math.round(lo*100)}-${Math.min(85,Math.round(hi*100))}%`,n:b.length,exp:avgp(b),act:rate(b)}}).filter(b=>b.n);
   const groups={};done.forEach(h=>(groups[h.group]??=[]).push(h));
-  el.innerHTML=`<div class="kpis">
+  el.innerHTML=adaptPanel+`<div class="kpis">
     <div class="kpi"><div class="k">Previsioni verificate</div><div class="v">${done.length}</div><div class="d">${pending.length} in attesa</div></div>
     <div class="kpi"><div class="k">Uscite</div><div class="v ${rate(done)>=avgp(done)?"pos":"neg"}">${done.length?pct(rate(done)):"–"}</div><div class="d">attese: ${done.length?pct(avgp(done)):"–"}</div></div>
     <div class="kpi"><div class="k">Solo giocata principale</div><div class="v">${main.length?pct(rate(main)):"–"}</div><div class="d">su ${main.length}, attese ${main.length?pct(avgp(main)):"–"}</div></div></div>
