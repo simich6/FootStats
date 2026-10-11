@@ -23,8 +23,9 @@ def top_candidates(preds: list[dict], has_backtest: bool) -> list[dict]:
     for f in preds:
         if any(f["new_team"]):
             continue
-        ok = sorted((p for p in f["picks"] if (not has_backtest or p["reliability"] != "red") and LO <= p["prob"] <= HI),
-                    key=lambda p: -p["prob"])
+        ok = sorted((p for p in f["picks"] if (not has_backtest or p["reliability"] != "red") and LO <= p["prob"] <= HI
+                     and (p.get("base") is None or p["prob"] - p["base"] > 0.02)),
+                    key=lambda p: -(p["prob"] - p["base"] if p.get("base") is not None else 0))
         if not ok:
             continue
         chosen, seen = [], set()

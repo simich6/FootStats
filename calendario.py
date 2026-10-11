@@ -108,7 +108,8 @@ def fetch(matches: pd.DataFrame, leagues: dict) -> pd.DataFrame:
                 continue
             when = datetime.fromisoformat(m["utcDate"].replace("Z", "+00:00")).astimezone(ROME)
             rows.append({"league": code, "season": None, "date": pd.Timestamp(when.date()),
-                         "home": h, "away": a, "time": when.strftime("%H:%M")})
+                         "home": h, "away": a, "time": when.strftime("%H:%M"),
+                         "ko": when.astimezone(timezone.utc).isoformat()})
             n += 1
         print(f"  calendario extra {leagues[code]}: {n} partite")
     if unmatched:

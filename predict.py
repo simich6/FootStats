@@ -37,6 +37,28 @@ def _trim(p: np.ndarray, mass: float = 0.998) -> list[float]:
     return [round(float(x), 4) for x in p[:cut]]
 
 
+def _ko(f) -> tuple[str | None, str]:
+    """Istante d'inizio (UTC, ISO) e orario italiano da mostrare."""
+    ko = f.get("ko")
+    if isinstance(ko, str) and ko:
+        t = pd.Timestamp(ko)
+        return t.isoformat(), t.tz_convert("Europe/Rome").strftime("%H:%M")
+    return None, str(f.get("time") or "").strip() if str(f.get("time") or "").strip() != "nan" else ""
+
+
+def base_rates(hist: pd.DataFrame, today: pd.Timestamp) -> dict:
+    """Frequenza di ogni giocata nel campionato nell'ultimo anno: serve a capire se una giocata
+    è "da partita" o semplicemente quello che succede quasi sempre (es. Over 1.5)."""
+    recent = hist[hist["date"] >= today - pd.Timedelta(days=365)]
+    rows = recent.to_dict("records")
+    out = {}
+    for mdef in mk.MARKETS:
+        ys = [y for r in rows if not np.isnan(y := mk.outcome(mdef, r))]
+        if len(ys) >= 50:
+            out[mdef["key"]] = round(float(np.mean(ys)), 4)
+    return out
+
+
 def predict_fixtures(matches: pd.DataFrame, fixtures: pd.DataFrame, bt: dict | None) -> list[dict]:
     metrics = {m["market"]: m for m in (bt or {}).get("metrics", [])}
     iso = (bt or {}).get("iso", {})
@@ -50,6 +72,7 @@ def predict_fixtures(matches: pd.DataFrame, fixtures: pd.DataFrame, bt: dict | N
             continue
         recent = hist[hist["date"] >= today - pd.Timedelta(days=365)]
         counts = pd.concat([recent["home"], recent["away"]]).value_counts()
+        base = base_rates(hist, today)
         for _, f in fx.iterrows():
             dist = model.distributions(ratings, f["home"], f["away"])
             nh, na = int(counts.get(f["home"], 0)), int(counts.get(f["away"], 0))
@@ -64,15 +87,17 @@ def predict_fixtures(matches: pd.DataFrame, fixtures: pd.DataFrame, bt: dict | N
                         "prob": round(p, 4), "fair_odds": round(1 / p, 2),
                         "confidence": _confidence(mrow, nh, na),
                         "reliability": mrow["reliability"] if mrow else "red",
-                        "hist_hit": round(mrow["hit_rate"], 3) if mrow else None}
+                        "hist_hit": round(mrow["hit_rate"], 3) if mrow else None,
+                        "base": base.get(mdef["key"])}
                 fi = mk.fair_implied(f, mdef["key"])
                 if fi:
                     odds, implied = fi
                     pick.update(odds=round(float(odds), 2), implied=round(implied, 4),
                                 edge=round(p - implied, 4), ev=round(p * odds - 1, 4))
                 picks.append(pick)
+            ko, hhmm = _ko(f)
             out.append({
-                "league": config.LEAGUES[league], "code": league, "date": str(f["date"].date()), "time": f.get("time", ""),
+                "league": config.LEAGUES[league], "code": league, "date": str(f["date"].date()), "time": hhmm, "ko": ko,
                 "home": f["home"], "away": f["away"], "new_team": [nh == 0, na == 0],
                 "big": ratings["goals"].is_big(f["home"], f["away"]),
                 "expected": {s: [round(d["exp_h"], 2), round(d["exp_a"], 2)] for s, d in dist.items()},

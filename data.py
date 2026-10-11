@@ -134,4 +134,15 @@ def load_fixtures() -> pd.DataFrame:
     if not frames:
         return pd.DataFrame()
     fx = pd.concat(frames, ignore_index=True)
+    fx["ko"] = [_kickoff_utc(d, t) for d, t in zip(fx["date"], fx["time"])]
     return fx.sort_values("date").reset_index(drop=True)
+
+
+def _kickoff_utc(day, hhmm) -> str | None:
+    """Data + ora (ora inglese, come pubblicata da football-data.co.uk) -> istante UTC in formato ISO."""
+    try:
+        h, m = str(hhmm).strip().split(":")[:2]
+        ts = pd.Timestamp(day.date()) + pd.Timedelta(hours=int(h), minutes=int(m))
+        return ts.tz_localize("Europe/London").tz_convert("UTC").isoformat()
+    except (ValueError, TypeError, AttributeError):
+        return None
