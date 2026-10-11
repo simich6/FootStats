@@ -130,6 +130,10 @@ table.reg td,table.reg th{padding:5px 6px;font-size:.84rem}
 table.heat td,table.heat th{text-align:center;padding:5px 4px;font-size:.82rem;border:1px solid var(--line)}
 table.heat th:first-child{font-size:.72rem;white-space:normal}
 details.sgrid summary{cursor:pointer;margin:6px 0}
+.lgbtn{font:inherit;padding:6px 10px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--ink);cursor:pointer;text-align:left;min-width:9em}
+.liftbar{position:relative;height:6px;border-radius:3px;background:var(--line);margin:4px 0 2px;max-width:260px}
+.liftbar .lb-fill{position:absolute;top:0;height:100%;border-radius:3px}.liftbar .lb-fill.up{background:var(--turf)}.liftbar .lb-fill.down{background:var(--bad)}
+.liftbar .lb-base{position:absolute;top:-3px;width:2px;height:12px;background:var(--ink)}
 .hero{display:flex;justify-content:space-between;align-items:end;gap:12px;padding:18px;border-radius:14px;color:#fff;margin-bottom:12px;
   background:linear-gradient(135deg,#1F4D3A 0%,#2E6B4F 60%,#3D7F5E 100%);position:relative;overflow:hidden}
 .hero::after{content:"";position:absolute;right:-40px;top:-40px;width:160px;height:160px;border:2px solid rgba(255,255,255,.18);border-radius:50%}
@@ -187,7 +191,7 @@ tr.pick{cursor:pointer}
 </nav>
 <main>
   <div class="filters" id="filters">
-    <label>Campionato<select id="fLeague"><option value="">Tutti</option></select></label>
+    <label>Campionati<button type="button" id="fLeague" class="lgbtn">Tutti ▾</button></label>
     <label>Mercato<select id="fGroup"><option value="">Tutti</option></select></label>
     <label>Prob. minima <span id="vProb">50%</span><input type="range" id="fProb" min="50" max="95" step="5" value="50"></label>
     <label>Prob. massima <span id="vMax">75%</span><input type="range" id="fMax" min="60" max="100" step="5" value="75"></label>
@@ -213,6 +217,10 @@ tr.pick{cursor:pointer}
 </footer>
 <script>
 const DATA = __DATA__;
+// Partite già iniziate o finite: spariscono in base all'ora in cui apri la pagina
+const kickoff=f=>f.ko?new Date(f.ko).getTime():new Date(f.date+"T23:59:59").getTime();
+function pruneStarted(){const n=DATA.fixtures.length;DATA.fixtures=DATA.fixtures.filter(f=>kickoff(f)>Date.now());return n-DATA.fixtures.length}
+pruneStarted();
 const $=id=>document.getElementById(id);
 const pct=p=>(p*100).toFixed(0)+"%";
 const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
@@ -225,14 +233,30 @@ const STAT={goals:"Gol",corners:"Corner",cards:"Cartellini",sot:"Tiri in porta",
 const LINES={goals:[1.5,2.5,3.5],corners:[7.5,8.5,9.5,10.5,11.5],cards:[2.5,3.5,4.5,5.5],sot:[6.5,7.5,8.5,9.5],shots:[20.5,22.5,24.5,26.5],fouls:[20.5,22.5,24.5,26.5]};
 const DEFLINE={goals:2.5,corners:9.5,cards:4.5,sot:8.5,shots:24.5,fouls:22.5};
 
-$("updated").textContent=`Aggiornato il ${DATA.generated} · ${DATA.fixtures.length} partite in programma`;
+const setUpdated=()=>$("updated").textContent=`Aggiornato il ${DATA.generated} · ${DATA.fixtures.length} partite ancora da giocare`;
+setUpdated();
 if(DATA.demo)$("demoNote").innerHTML='<p class="demo">Demo con squadre e dati simulati, per vedere come funziona. Con <b>python run.py</b> ottieni la stessa dashboard con i dati reali.</p>';
 
 const leagueNames=[...new Set([...DATA.fixtures.map(f=>f.league),...Object.keys(DATA.leagues||{})])];
-leagueNames.forEach(l=>$("fLeague").add(new Option(l,l)));
+const GKEY="footstats-campionati",MAJOR=["Serie A","Premier League","La Liga","Bundesliga","Ligue 1"];
+let LG=(()=>{try{return new Set((JSON.parse(localStorage.getItem(GKEY))||[]).filter(l=>leagueNames.includes(l)))}catch(e){return new Set()}})();
+const inL=l=>!LG.size||LG.has(l);
+function lgLabel(){$("fLeague").textContent=(!LG.size||LG.size===leagueNames.length?"Tutti":LG.size<=2?[...LG].join(", "):`${LG.size} campionati`)+" ▾"}
+function leagueSheet(){const sh=document.createElement("div");sh.className="sheet-bg";
+  sh.innerHTML=`<div class="sheet" role="dialog" aria-label="Campionati"><div class="grab"></div><div class="sheet-t">Quali campionati?</div>
+    <div class="row" style="margin:8px 0"><button class="btn small ghost" data-l="all">Tutti</button><button class="btn small ghost" data-l="major">Solo i 5 principali</button><button class="btn small ghost" data-l="none">Nessuno</button></div>
+    <div class="mkgrid">${leagueNames.map(l=>`<label class="mk"><input type="checkbox" value="${esc(l)}" ${!LG.size||LG.has(l)?"checked":""}> ${esc(l)}</label>`).join("")}</div>
+    <div class="row" style="margin-top:12px"><button class="btn lSave">Applica</button><button class="btn ghost lX">Annulla</button></div></div>`;
+  document.body.appendChild(sh);const boxes=[...sh.querySelectorAll(".mk input")];
+  sh.querySelectorAll("[data-l]").forEach(b=>b.addEventListener("click",()=>boxes.forEach(i=>i.checked=b.dataset.l==="all"||(b.dataset.l==="major"&&MAJOR.includes(i.value)))));
+  sh.querySelector(".lX").addEventListener("click",()=>sh.remove());sh.addEventListener("click",e=>{if(e.target===sh)sh.remove()});
+  sh.querySelector(".lSave").addEventListener("click",()=>{const sel=boxes.filter(i=>i.checked).map(i=>i.value);
+    LG=new Set(sel.length===leagueNames.length?[]:sel);try{localStorage.setItem(GKEY,JSON.stringify([...LG]))}catch(e){}
+    lgLabel();sh.remove();render()})}
+lgLabel();$("fLeague").addEventListener("click",leagueSheet);
 [...new Set(DATA.fixtures.flatMap(f=>f.picks.map(p=>p.group)))].forEach(g=>$("fGroup").add(new Option(g,g)));
 
-function filters(){return{league:$("fLeague").value,group:$("fGroup").value,prob:+$("fProb").value/100,max:+$("fMax").value/100,conf:+$("fConf").value,green:$("fGreen").checked}}
+function filters(){return{group:$("fGroup").value,prob:+$("fProb").value/100,max:+$("fMax").value/100,conf:+$("fConf").value,green:$("fGreen").checked}}
 function passes(p,F){return avail(p)&&(!F.group||p.group===F.group)&&p.prob>=F.prob&&p.prob<=F.max&&p.confidence>=F.conf&&(!F.green||p.reliability==="green")}
 function chipLabel(p){if(p.group==="Multipla")return p.label;if(p.group==="Esito finale")return"Esito "+p.label;if(p.group==="Gol")return/^(Over|Under|Casa|Ospite)/.test(p.label)?p.label+" gol":p.label;return p.label+" "+p.group.toLowerCase()}
 const games=t=>DATA.trends[t]?.games||[];
@@ -288,7 +312,7 @@ function legsFor(lg){const now=new Date();now.setHours(0,0,0,0);const lim=new Da
     .sort((a,b)=>b.p.prob-a.p.prob).slice(0,9)}
 function combos(arr,k){const out=[],rec=(st,acc)=>{if(acc.length===k){out.push(acc.slice());return}for(let i=st;i<arr.length;i++){acc.push(arr[i]);rec(i+1,acc);acc.pop()}};rec(0,[]);return out}
 function renderMulti(){
-  const el=$("multi"),F=filters(),lgs=[...new Set(DATA.fixtures.map(f=>f.league))].filter(l=>!F.league||l===F.league);
+  const el=$("multi"),F=filters(),lgs=[...new Set(DATA.fixtures.map(f=>f.league))].filter(l=>inL(l));
   const seg=(k,opts)=>`<span class="seg" role="group">${opts.map(([v,l])=>`<button aria-pressed="${MU[k]===v}" data-mu="${k}" data-v="${v}">${l}</button>`).join("")}</span>`;
   const blocks=lgs.map(lg=>{const legs=legsFor(lg);if(legs.length<MU.k)return"";
     let cs=combos(legs,MU.k).map(c=>({c,prob:c.reduce((a,x)=>a*x.p.prob,1)}));
@@ -312,7 +336,9 @@ function renderMulti(){
 }
 
 /* ---------- TOP DELLA SETTIMANA ---------- */
-const TOP={n:5,days:7,band:"40-75",mine:false,open:{}};
+const TOP={n:5,days:7,band:"40-75",mine:false,open:{},sort:"lift"};
+const lift=p=>p.base==null?0:p.prob-p.base;
+const score=p=>TOP.sort==="lift"?lift(p):p.prob;
 const bandRange=()=>TOP.band.split("-").map(x=>+x/100);
 const STATKEY={"Gol":"goals","Calci d'angolo":"corners","Cartellini":"cards","Falli":"fouls","Tiri totali":"shots","Tiri in porta":"sot"};
 function why(f,p){
@@ -330,29 +356,31 @@ function ring(prob,main){const r=26,c=2*Math.PI*r;
 function renderTop(){
   const el=$("top"),F=filters(),now=new Date();now.setHours(0,0,0,0);const lim=new Date(now);lim.setDate(lim.getDate()+TOP.days);
   const hasBt=!!DATA.backtest,mine=myMarkets();
-  const cards=DATA.fixtures.filter(f=>(!F.league||f.league===F.league)&&new Date(f.date+"T12:00")<lim&&!f.new_team.some(Boolean)).map(f=>{
-    const ok=f.picks.filter(p=>avail(p)&&(!hasBt||p.reliability!=="red")&&p.prob>=bandRange()[0]&&p.prob<=bandRange()[1]&&(!TOP.mine||mine.has(p.group))).sort((a,b)=>b.prob-a.prob);
+  const cards=DATA.fixtures.filter(f=>(inL(f.league))&&new Date(f.date+"T12:00")<lim&&!f.new_team.some(Boolean)).map(f=>{
+    const ok=f.picks.filter(p=>avail(p)&&(!hasBt||p.reliability!=="red")&&p.prob>=bandRange()[0]&&p.prob<=bandRange()[1]&&(!TOP.mine||mine.has(p.group))&&(TOP.sort!=="lift"||lift(p)>0.02)).sort((a,b)=>score(b)-score(a));
     if(!ok.length)return null;
     const chosen=[],fams=new Set();
     for(const p of ok){if(chosen.length>=5)break;const fa=family(p.key)||p.key;if(fams.has(fa))continue;chosen.push(p);fams.add(fa)}
-    return{f,picks:chosen}}).filter(Boolean).sort((a,b)=>b.picks[0].prob-a.picks[0].prob).slice(0,TOP.n);
+    return{f,picks:chosen}}).filter(Boolean).sort((a,b)=>score(b.picks[0])-score(a.picks[0])).slice(0,TOP.n);
   const seg=(k,opts)=>`<span class="seg" role="group">${opts.map(([v,l])=>`<button aria-pressed="${TOP[k]===v}" data-k="${k}" data-v="${v}">${l}</button>`).join("")}</span>`;
   const range=`${now.toLocaleDateString("it-IT",{day:"numeric",month:"short"})} – ${new Date(lim-864e5).toLocaleDateString("it-IT",{day:"numeric",month:"short"})}`;
   const nPicks=cards.reduce((a,c)=>a+c.picks.length,0);
-  el.innerHTML=`<div class="hero"><div><div class="hero-k">Le giocate più probabili</div><div class="hero-v">${range}</div></div><div class="hero-n"><b>${nPicks}</b> giocate<br>${cards.length} partite</div></div>
+  el.innerHTML=`<div class="hero"><div><div class="hero-k">${TOP.sort==="lift"?"Giocate da partita, non scontate":"Le giocate più probabili"}</div><div class="hero-v">${range}</div></div><div class="hero-n"><b>${nPicks}</b> giocate<br>${cards.length} partite</div></div>
     <div class="row toolbar">${seg("n",[[3,"Top 3"],[4,"4"],[5,"5"]])}${seg("days",[[3,"Weekend"],[7,"7 giorni"]])}
-    <span class="seg" role="group" aria-label="Fascia di probabilità">${[["40-75","40–75%"],["50-75","50–75%"],["60-80","60–80%"]].map(([v,l])=>`<button aria-pressed="${TOP.band===v}" data-band="${v}">${l}</button>`).join("")}</span>
+    <span class="seg" role="group" aria-label="Ordine">${[["lift","Più interessanti"],["prob","Più probabili"]].map(([v,l])=>`<button aria-pressed="${TOP.sort===v}" data-sort="${v}">${l}</button>`).join("")}</span>
+    <span class="seg" role="group" aria-label="Fascia di probabilità">${[["40-65","Quota 1.5+"],["40-75","40–75%"],["50-75","50–75%"],["60-80","60–80%"]].map(([v,l])=>`<button aria-pressed="${TOP.band===v}" data-band="${v}">${l}</button>`).join("")}</span>
     <label class="row note" style="gap:6px"><input type="checkbox" id="topMine" ${TOP.mine?"checked":""} ${mine.size?"":"disabled"}> solo i miei mercati${mine.size?` (${[...mine].join(", ")})`:" (servono 30 giocate in attivo su un mercato)"}</label></div>
     ${cards.length?cards.map((c,i)=>`<article class="tc ${i===0?"first":""}">
       <div class="tc-head"><span class="rk">${i+1}</span><div><div class="tc-teams">${esc(c.f.home)} <span>vs</span> ${esc(c.f.away)}${c.f.big?'<span class="bigm">Big match</span>':""}</div>
       <div class="note">${esc(c.f.league)} · ${new Date(c.f.date+"T12:00").toLocaleDateString("it-IT",{weekday:"short",day:"numeric",month:"short"})} ${esc(c.f.time||"")}</div></div></div>
-      ${c.picks.map((p,k)=>k===3&&!TOP.open[fid(c.f)]?`<button class="more" data-more="${esc(fid(c.f))}">Mostra altre ${c.picks.length-3} giocate ▾</button>`:k>=3&&!TOP.open[fid(c.f)]?"":`<div class="tp">${ring(p.prob,k===0)}<div><div class="tp-l">${chipLabel(p)}</div><div class="tp-w">${why(c.f,p)}</div><button class="playbtn" data-fi="${DATA.fixtures.indexOf(c.f)}" data-pk="${p.key}">+ La gioco</button> <button class="playbtn edit" data-efi="${DATA.fixtures.indexOf(c.f)}" data-epk="${p.key}">✎ Modifica</button></div></div>`).join("")}
+      ${c.picks.map((p,k)=>k===3&&!TOP.open[fid(c.f)]?`<button class="more" data-more="${esc(fid(c.f))}">Mostra altre ${c.picks.length-3} giocate ▾</button>`:k>=3&&!TOP.open[fid(c.f)]?"":`<div class="tp">${ring(p.prob,k===0)}<div><div class="tp-l">${chipLabel(p)}</div>${p.base!=null?`<div class="liftbar" title="Media del campionato contro questa partita"><span class="lb-base" style="left:${p.base*100}%"></span><span class="lb-fill ${p.prob>=p.base?"up":"down"}" style="left:${Math.min(p.base,p.prob)*100}%;width:${Math.abs(p.prob-p.base)*100}%"></span></div><div class="tp-w">di solito nel campionato <b>${pct(p.base)}</b> · in questa partita <b>${pct(p.prob)}</b> (${lift(p)>=0?"+":""}${(lift(p)*100).toFixed(0)} punti)</div>`:""}<div class="tp-w">${why(c.f,p)}</div><button class="playbtn" data-fi="${DATA.fixtures.indexOf(c.f)}" data-pk="${p.key}">+ La gioco</button> <button class="playbtn edit" data-efi="${DATA.fixtures.indexOf(c.f)}" data-epk="${p.key}">✎ Modifica</button></div></div>`).join("")}
       ${TOP.open[fid(c.f)]&&c.picks.length>3?`<button class="more" data-more="${esc(fid(c.f))}">Mostra meno ▴</button>`:""}
     </article>`).join("")
     :'<p class="empty">Nessuna partita nel periodo scelto. Aggiorna i dati o allarga a 7 giorni.</p>'}
-    <p class="note">Mostra solo i mercati scelti in ⚙ Mercati. Per ogni partita le 3 giocate più probabili nella fascia scelta, ognuna su un mercato diverso; con la tendina arrivi a 5. Solo mercati che nel backtest si sono dimostrati affidabili.</p>`;
+    <p class="note">Mostra solo i mercati scelti in ⚙ Mercati. "Più interessanti" mette in cima le giocate dove questa partita si discosta di più dalla media del campionato: è lì che il modello dice qualcosa che non è già scontato (un Over 1.5 al 76% in un campionato dove esce il 75% delle volte non dice niente). Per ogni partita fino a 3 giocate su mercati diversi, 5 con la tendina. Solo mercati che nel backtest si sono dimostrati affidabili.</p>`;
   el.querySelectorAll("[data-k]").forEach(b=>b.addEventListener("click",()=>{TOP[b.dataset.k]=+b.dataset.v;renderTop()}));
   el.querySelectorAll("[data-band]").forEach(b=>b.addEventListener("click",()=>{TOP.band=b.dataset.band;renderTop()}));
+  el.querySelectorAll("[data-sort]").forEach(b=>b.addEventListener("click",()=>{TOP.sort=b.dataset.sort;renderTop()}));
   el.querySelectorAll("[data-more]").forEach(b=>b.addEventListener("click",()=>{const k=b.dataset.more;TOP.open[k]=!TOP.open[k];renderTop()}));
   $("topMine").addEventListener("change",e=>{TOP.mine=e.target.checked;renderTop()});
   el.querySelectorAll(".playbtn:not(.edit)").forEach(b=>b.addEventListener("click",()=>{const f=DATA.fixtures[+b.dataset.fi];quickAdd(f,f.picks.find(p=>p.key===b.dataset.pk))}));
@@ -435,7 +463,7 @@ function askSheet(f){const sh=document.createElement("div");sh.className="sheet-
 /* ---------- PARTITE ---------- */
 function renderMatches(){
   const F=filters(),el=$("matches");el.innerHTML="";
-  const list=DATA.fixtures.filter(f=>!F.league||f.league===F.league);
+  const list=DATA.fixtures.filter(f=>inL(f.league));
   if(!list.length){el.innerHTML='<p class="empty">Nessuna partita in calendario per questo filtro. Esegui di nuovo python run.py per aggiornare il calendario.</p>';return}
   let day="";
   list.forEach((f,i)=>{
@@ -527,7 +555,7 @@ function matchDetail(f,i){
 let teamSel=null;
 function renderTeams(){
   const el=$("teams"),F=filters();
-  const teams=Object.entries(DATA.trends).filter(([,t])=>!F.league||t.league===F.league).map(([n])=>n).sort();
+  const teams=Object.entries(DATA.trends).filter(([,t])=>inL(t.league)).map(([n])=>n).sort();
   if(!teams.length){el.innerHTML='<p class="empty">Nessuna squadra per questo campionato.</p>';return}
   if(!teams.includes(teamSel))teamSel=teams[0];
   const gs=games(teamSel);
@@ -557,20 +585,23 @@ function renderTeams(){
 }
 
 /* ---------- CAMPIONATI ---------- */
+let LG_TAB=null;
 let leagueStat="goals";
 function renderLeagues(){
   const el=$("leagues"),F=filters(),names=Object.keys(DATA.leagues||{});
   if(!names.length){el.innerHTML='<p class="empty">Dati di campionato non disponibili.</p>';return}
-  const name=F.league&&DATA.leagues[F.league]?F.league:names[0];
+  const shown=names.filter(inL).length?names.filter(inL):names;
+  if(!LG_TAB||!shown.includes(LG_TAB))LG_TAB=shown[0];const name=LG_TAB;
   const seas=Object.values(DATA.leagues[name]),cur=seas[seas.length-1],prev=seas.length>1?seas[0]:null;
   const kpi=(label,v,pv,fmt)=>`<div class="kpi"><div class="k">${label}</div><div class="v">${fmt(v)}</div>${pv!=null?`<div class="d ${v>=pv?"pos":"neg"}">${v>=pv?"▲":"▼"} ${fmt(pv)} la scorsa</div>`:""}</div>`;
   const f1=x=>x.toFixed(1);
-  el.innerHTML=`<div class="panel"><h2>${esc(name)}</h2><p class="note">Stagione ${cur.label}: ${cur.n} partite${prev?` · confronto con ${prev.label}`:""}. Seleziona un altro campionato dal filtro in alto.</p>
+  el.innerHTML=`${shown.length>1?`<div class="row" style="margin-bottom:10px">${shown.map(n=>`<button class="chip" data-lt="${esc(n)}" style="cursor:pointer;${n===name?"background:var(--turf);color:#fff;border-color:var(--turf)":"background:none;color:inherit"}">${esc(n)}</button>`).join("")}</div>`:""}<div class="panel"><h2>${esc(name)}</h2><p class="note">Stagione ${cur.label}: ${cur.n} partite${prev?` · confronto con ${prev.label}`:""}.</p>
     <div class="kpis">${kpi("Gol a partita",cur.avg.goals,prev?.avg.goals,f1)}${kpi("Corner a partita",cur.avg.corners??0,prev?.avg.corners,f1)}${kpi("Cartellini a partita",cur.avg.cards??0,prev?.avg.cards,f1)}
     ${kpi("Over 2.5",cur.over25,prev?.over25,pct)}${kpi("Goal",cur.btts,prev?.btts,pct)}${kpi("Vittorie in casa",cur.home_win,prev?.home_win,pct)}</div>
     <h3>Media per giornata</h3><div class="row">${Object.entries(STAT).map(([k,v])=>`<button class="chip" data-s="${k}" style="cursor:pointer;${k===leagueStat?"background:var(--turf);color:#fff;border-color:var(--turf)":"background:none;color:inherit"}">${v}</button>`).join("")}</div>
     <div class="chartbox" style="height:260px"><canvas id="lgChart"></canvas></div></div>`;
   el.querySelectorAll("[data-s]").forEach(b=>b.addEventListener("click",()=>{leagueStat=b.dataset.s;renderLeagues()}));
+  el.querySelectorAll("[data-lt]").forEach(b=>b.addEventListener("click",()=>{LG_TAB=b.dataset.lt;renderLeagues()}));
   const n=Math.max(...seas.map(s=>s.weekly[leagueStat].length));
   chart("league",$("lgChart"),{type:"line",data:{labels:[...Array(n)].map((_,k)=>k+1),datasets:seas.map((s,k)=>({label:s.label,data:s.weekly[leagueStat],
     borderColor:k===seas.length-1?css("--turf"):css("--draw"),borderWidth:k===seas.length-1?3:2,tension:.3,pointRadius:k===seas.length-1?3:0}))},
@@ -580,7 +611,7 @@ function renderLeagues(){
 /* ---------- MIGLIORI ---------- */
 function renderBest(){
   const F=filters(),el=$("best");
-  const rows=DATA.fixtures.filter(f=>!F.league||f.league===F.league).flatMap(f=>f.picks.filter(p=>passes(p,F)).map(p=>({...p,f})))
+  const rows=DATA.fixtures.filter(f=>inL(f.league)).flatMap(f=>f.picks.filter(p=>passes(p,F)).map(p=>({...p,f})))
     .sort((a,b)=>(b.edge??-1)-(a.edge??-1)||b.confidence*b.prob-a.confidence*a.prob).slice(0,80);
   el.innerHTML=rows.length?`<p class="note">Giocate sopra la probabilità massima escluse: di solito pagano pochissimo. Ordinate per vantaggio sulla quota (dove disponibile), poi per probabilità e affidabilità.</p><div class="scroll"><table>
     <tr><th>Partita</th><th>Giocata</th><th>Prob.</th><th>Quota giusta</th><th>Vantaggio</th><th>Affid.</th></tr>
@@ -650,7 +681,7 @@ function autoSettle(){const list=loadDiary();let n=0;
     b.status=w?"won":"lost";b.auto=true;b.result=`${r.h_goals}-${r.a_goals}`;n++}
   saveDiary(list);return n}
 function renderHistory(){
-  const el=$("history"),F=filters(),all=(DATA.history||[]).filter(h=>!F.league||h.league===F.league);
+  const el=$("history"),F=filters(),all=(DATA.history||[]).filter(h=>inL(h.league));
   const done=all.filter(h=>h.won!=null),pending=all.filter(h=>h.won==null&&!h.void);
   const AD=Object.entries(DATA.adapt||{}).sort((a,b)=>b[1].n-a[1].n);
   const adaptPanel=`<div class="panel"><h3 style="margin-top:0">Apprendimento adattivo</h3>
@@ -797,7 +828,7 @@ function saveQ(q){try{localStorage.setItem(QKEY,JSON.stringify(q))}catch(e){}}
 function renderValue(){
   const el=$("value"),F=filters(),Q=loadQ(),hasBt=!!DATA.backtest,today=new Date();today.setHours(0,0,0,0);
   const rows=[];
-  DATA.fixtures.filter(f=>(!F.league||f.league===F.league)&&!f.new_team.some(Boolean)&&new Date(f.date+"T23:59")>=today).forEach(f=>f.picks.forEach(p=>{
+  DATA.fixtures.filter(f=>(inL(f.league))&&!f.new_team.some(Boolean)&&new Date(f.date+"T23:59")>=today).forEach(f=>f.picks.forEach(p=>{
     if(!avail(p)||p.prob<0.4||p.prob>0.8||(hasBt&&p.reliability==="red")||(F.group&&p.group!==F.group))return;
     const o=Q[pid(f,p)]??p.odds??null;rows.push({f,p,o,mine:Q[pid(f,p)]!=null})}));
   const calc=r=>r.o>1?{imp:1/r.o,edge:r.p.prob-1/r.o,ev:r.p.prob*r.o-1}:null;
@@ -1019,7 +1050,7 @@ function renderReliability(){
 applyReferees();
 $("mkBtn").addEventListener("click",marketSheet);
 let tab="top";
-function render(){$("vProb").textContent=$("fProb").value+"%";$("vMax").textContent=$("fMax").value+"%";$("vConf").textContent=$("fConf").value;
+function render(){if(pruneStarted())setUpdated();$("vProb").textContent=$("fProb").value+"%";$("vMax").textContent=$("fMax").value+"%";$("vConf").textContent=$("fConf").value;
   const pickTab=tab==="matches"||tab==="best";
   $("filters").hidden=tab==="diary";
   if(tab==="top"){document.querySelectorAll("#filters label").forEach((l,k)=>l.hidden=k!==0);renderTop();return}
@@ -1032,6 +1063,7 @@ document.querySelectorAll("nav button").forEach(b=>b.addEventListener("click",()
   tab=b.dataset.tab;document.querySelectorAll("nav button").forEach(x=>x.setAttribute("aria-selected",x===b));
   document.querySelectorAll("main section").forEach(s=>s.hidden=s.id!==tab);render()}));
 document.querySelectorAll(".filters select,.filters input").forEach(x=>x.addEventListener("input",render));
+setInterval(()=>{if(pruneStarted()){setUpdated();render()}},60000);
 render();
 </script>
 </body>
