@@ -172,7 +172,7 @@ tr.pick{cursor:pointer}
 </head>
 <body>
 <header>
-  <div class="row" style="justify-content:space-between;align-items:center"><h1>Footstats</h1><button class="btn ghost small" id="mkBtn" aria-label="Scegli i mercati del tuo bookmaker">⚙ Mercati</button></div>
+  <div class="row" style="justify-content:space-between;align-items:center"><h1>Footstats</h1><span class="row" style="gap:6px"><button class="btn ghost small" id="acBtn" aria-label="Account">👤 Accedi</button><button class="btn ghost small" id="mkBtn" aria-label="Scegli i mercati del tuo bookmaker">⚙ Mercati</button></span></div>
   <p class="sub" id="updated"></p>
   <div id="demoNote"></div>
 </header>
@@ -301,6 +301,69 @@ function marketSheet(){
     sh.querySelector(".mSave").addEventListener("click",()=>{MAINONLY=sh.querySelector("#mMain").checked;try{localStorage.setItem(LKEY,MAINONLY?"main":"all")}catch(e){}
       MK=new Set([...sh.querySelectorAll(".mkgrid .mk input:checked")].map(i=>i.value));
       try{localStorage.setItem(MKEY,JSON.stringify([...MK]))}catch(e){}sh.remove();render()})};
+  draw();sh.addEventListener("click",e=>{if(e.target===sh)sh.remove()});document.body.appendChild(sh)}
+
+/* ---------- ACCOUNT E SALVATAGGIO ONLINE (Firebase) ---------- */
+const SYNC_KEYS=["footstats-diario","footstats-diario-del","footstats-cassa","footstats-arbitri","footstats-quote","footstats-mercati","footstats-linee","footstats-campionati"];
+const FB={ready:false,user:null,db:null,auth:null,mods:null,status:"",timer:null,pulling:false};
+const FBV="10.12.2",FBURL=`https://www.gstatic.com/firebasejs/${FBV}/`;
+const lsGet=k=>{try{return localStorage.getItem(k)}catch(e){return null}};
+const _lsSet=Storage.prototype.setItem;
+Storage.prototype.setItem=function(k,v){_lsSet.call(this,k,v);if(this===localStorage&&SYNC_KEYS.includes(k)&&FB.user&&!FB.pulling)scheduleSync()};
+function setStatus(t){FB.status=t;const b=$("acBtn");if(b)b.textContent=FB.user?`👤 ${FB.user.email.split("@")[0]}${t==="err"?" ⚠":""}`:"👤 Accedi"}
+function scheduleSync(){clearTimeout(FB.timer);FB.timer=setTimeout(pushCloud,1200)}
+async function pushCloud(){if(!FB.user)return;const{doc,setDoc,serverTimestamp}=FB.mods.fs;
+  const data={aggiornato:serverTimestamp()};SYNC_KEYS.forEach(k=>{const v=lsGet(k);if(v!=null)data[k.replace("footstats-","")]=v});
+  try{await setDoc(doc(FB.db,"utenti",FB.user.uid),data);setStatus("ok")}catch(e){console.error(e);setStatus("err")}}
+function mergeDiary(local,cloud,dead){const byId=new Map();const rank=b=>b.status==="open"?0:1;
+  [...cloud,...local].forEach(b=>{if(dead.has(b.id))return;const o=byId.get(b.id);if(!o||rank(b)>rank(o)||(rank(b)===rank(o)&&b===local.find(x=>x.id===b.id)))byId.set(b.id,b)});
+  return[...byId.values()].sort((a,b)=>a.id-b.id)}
+async function pullCloud(){if(!FB.user)return;const{doc,getDoc}=FB.mods.fs;
+  try{const snap=await getDoc(doc(FB.db,"utenti",FB.user.uid));const c=snap.exists()?snap.data():{};FB.pulling=true;
+    const P=(s,d)=>{try{return JSON.parse(s)??d}catch(e){return d}};
+    const dead=new Set([...P(lsGet("footstats-diario-del"),[]),...P(c["diario-del"],[])]);
+    localStorage.setItem("footstats-diario-del",JSON.stringify([...dead]));
+    localStorage.setItem("footstats-diario",JSON.stringify(mergeDiary(P(lsGet("footstats-diario"),[]),P(c.diario,[]),dead)));
+    const q={...P(c.quote,{}),...P(lsGet("footstats-quote"),{})};localStorage.setItem("footstats-quote",JSON.stringify(q));
+    const r={...P(c.arbitri,{}),...P(lsGet("footstats-arbitri"),{})};localStorage.setItem("footstats-arbitri",JSON.stringify(r));
+    ["cassa","mercati","linee","campionati"].forEach(k=>{if(c[k]!=null&&lsGet("footstats-"+k)==null)localStorage.setItem("footstats-"+k,c[k])});
+    FB.pulling=false;await pushCloud();
+    try{MK=loadMk()}catch(e){}try{MAINONLY=lsGet(LKEY)!=="all"}catch(e){}
+    try{LG=new Set((JSON.parse(lsGet(GKEY))||[]).filter(l=>leagueNames.includes(l)));lgLabel()}catch(e){}
+    applyReferees();render()}catch(e){FB.pulling=false;console.error(e);setStatus("err")}}
+async function initFirebase(){const cfg=DATA.firebase;if(!cfg||!cfg.apiKey)return;
+  try{const[app,auth,fs]=await Promise.all(["firebase-app.js","firebase-auth.js","firebase-firestore.js"].map(f=>import(FBURL+f)));
+    FB.mods={auth,fs};const a=app.initializeApp(cfg);FB.auth=auth.getAuth(a);FB.db=fs.getFirestore(a);FB.ready=true;
+    auth.onAuthStateChanged(FB.auth,u=>{FB.user=u;setStatus("");if(u)pullCloud()});
+    document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&FB.user)pullCloud()})}
+  catch(e){console.error(e);FB.ready=false}}
+function accountSheet(){const sh=document.createElement("div");sh.className="sheet-bg";
+  const body=()=>!DATA.firebase?.apiKey?`<div class="sheet-t">Salvataggio online non ancora attivo</div>
+      <p class="note">Per avere un account e ritrovare diario, cassa e impostazioni su ogni dispositivo serve configurare Firebase (gratis) una sola volta: le istruzioni sono nel file LEGGIMI-ACCOUNT.md del progetto.</p>
+      <p class="note">Nel frattempo il diario resta salvato solo in questo browser: usa Esporta/Importa nel diario per farne un backup.</p><div class="row"><button class="btn ghost aX">Chiudi</button></div>`
+    :!FB.ready?`<div class="sheet-t">Collegamento in corso…</div><p class="note">Se resta così, controlla la connessione e ricarica la pagina.</p><div class="row"><button class="btn ghost aX">Chiudi</button></div>`
+    :FB.user?`<div class="sheet-t">Il tuo account</div><p>Accesso come <b>${esc(FB.user.email)}</b></p>
+      <p class="note">${FB.status==="err"?'<span class="neg">Ultimo salvataggio non riuscito: controlla la connessione.</span>':"Diario, cassa, quote, arbitri e impostazioni si salvano online da soli e li ritrovi su ogni dispositivo."}</p>
+      <div class="row"><button class="btn aSync">Sincronizza ora</button><button class="btn ghost aOut">Esci</button><button class="btn ghost aX">Chiudi</button></div>`
+    :`<div class="sheet-t">Accedi a Footstats</div><p class="note">Con l'account il diario e le impostazioni si salvano online e li ritrovi su telefono e computer.</p>
+      <label class="field">Email<input type="email" class="aE" autocomplete="email" style="width:100%"></label>
+      <label class="field" style="margin-top:6px">Password<input type="password" class="aP" autocomplete="current-password" style="width:100%" placeholder="almeno 6 caratteri"></label>
+      <div class="aMsg note" aria-live="polite" style="min-height:1.3em;margin:6px 0"></div>
+      <div class="row"><button class="btn aIn">Accedi</button><button class="btn ghost aUp">Crea account</button><button class="btn ghost aRes">Password dimenticata</button><button class="btn ghost aX">Chiudi</button></div>`;
+  const draw=()=>{sh.innerHTML=`<div class="sheet" role="dialog" aria-label="Account"><div class="grab"></div>${body()}</div>`;const q=c=>sh.querySelector(c);
+    q(".aX")?.addEventListener("click",()=>sh.remove());
+    const A=FB.mods?.auth,msg=t=>{q(".aMsg").innerHTML=t};
+    const err=e=>({"auth/invalid-credential":"Email o password non corretti.","auth/wrong-password":"Password non corretta.","auth/user-not-found":"Nessun account con questa email: premi Crea account.",
+      "auth/email-already-in-use":"Esiste già un account con questa email: premi Accedi.","auth/weak-password":"La password deve avere almeno 6 caratteri.","auth/invalid-email":"Email non valida.",
+      "auth/unauthorized-domain":"Questo indirizzo non è autorizzato in Firebase: vedi il passaggio 3 di LEGGIMI-ACCOUNT.md.","auth/network-request-failed":"Connessione assente."}[e.code]||("Errore: "+(e.code||e.message)));
+    const go=async fn=>{const e=q(".aE").value.trim(),p=q(".aP").value;if(!e||!p){msg('<span class="neg">Inserisci email e password.</span>');return}
+      msg("Attendi…");try{await fn(FB.auth,e,p);sh.remove()}catch(x){msg(`<span class="neg">${err(x)}</span>`)}};
+    q(".aIn")?.addEventListener("click",()=>go(A.signInWithEmailAndPassword));
+    q(".aUp")?.addEventListener("click",()=>go(A.createUserWithEmailAndPassword));
+    q(".aRes")?.addEventListener("click",async()=>{const e=q(".aE").value.trim();if(!e){msg('<span class="neg">Scrivi la tua email, poi premi di nuovo.</span>');return}
+      try{await A.sendPasswordResetEmail(FB.auth,e);msg('<span class="pos">Ti abbiamo mandato un\'email per reimpostare la password.</span>')}catch(x){msg(`<span class="neg">${err(x)}</span>`)}});
+    q(".aOut")?.addEventListener("click",async()=>{await A.signOut(FB.auth);sh.remove();setStatus("")});
+    q(".aSync")?.addEventListener("click",async()=>{await pullCloud();draw()})};
   draw();sh.addEventListener("click",e=>{if(e.target===sh)sh.remove()});document.body.appendChild(sh)}
 
 /* ---------- MULTIPLE ---------- */
@@ -1001,7 +1064,8 @@ function renderDiary(){
   el.querySelectorAll("[data-id]").forEach(b=>b.addEventListener("click",()=>{let l=loadDiary();const id=+b.dataset.id,s=b.dataset.s;
     if(s==="more"){const ch=prompt("Scrivi: A per annullata, oppure l'importo incassato con cashout (es. 7.50)");if(ch==null)return;
       if(/^a$/i.test(ch.trim()))l=l.map(x=>x.id===id?{...x,status:"void"}:x);else{const v=parseFloat(ch.replace(",","."));if(!(v>=0)){alert("Valore non valido");return}l=l.map(x=>x.id===id?{...x,status:"cashout",payout:v}:x)}}
-    else if(s==="del"){if(!confirm("Eliminare questa giocata?"))return;l=l.filter(x=>x.id!==id)}
+    else if(s==="del"){if(!confirm("Eliminare questa giocata?"))return;l=l.filter(x=>x.id!==id);
+      try{const d=JSON.parse(localStorage.getItem("footstats-diario-del"))||[];d.push(id);localStorage.setItem("footstats-diario-del",JSON.stringify(d))}catch(e){}}
     else if(s==="reopen")l=l.map(x=>x.id===id?{...x,status:"open",auto:false}:x);
     else l=l.map(x=>x.id===id?{...x,status:s,auto:false}:x);
     saveDiary(l);renderDiary()}));
@@ -1049,6 +1113,8 @@ function renderReliability(){
 
 applyReferees();
 $("mkBtn").addEventListener("click",marketSheet);
+$("acBtn").addEventListener("click",accountSheet);
+initFirebase();
 let tab="top";
 function render(){if(pruneStarted())setUpdated();$("vProb").textContent=$("fProb").value+"%";$("vMax").textContent=$("fMax").value+"%";$("vConf").textContent=$("fConf").value;
   const pickTab=tab==="matches"||tab==="best";
