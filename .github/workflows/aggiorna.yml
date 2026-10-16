@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -20,6 +20,8 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -32,12 +34,25 @@ jobs:
       - name: Aggiorna dati e dashboard
         env:
           FOOTBALL_DATA_ORG_KEY: ${{ secrets.FOOTBALL_DATA_ORG_KEY }}
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           if [ ! -f data/params.json ]; then python run.py --tune
           elif [ "$(date +%u)" = "1" ]; then python run.py --backtest
           else python run.py
           fi
           cp output/dashboard.html output/index.html
+      - name: Tieni attivi gli aggiornamenti automatici
+        # GitHub sospende i workflow programmati dopo 60 giorni senza attività nel repository:
+        # se l'ultima modifica ha più di 45 giorni, registra una modifica vuota.
+        run: |
+          last=$(git log -1 --format=%ct)
+          if [ $(( $(date +%s) - last )) -gt $(( 45*86400 )) ]; then
+            git config user.name "footstats-bot"
+            git config user.email "footstats-bot@users.noreply.github.com"
+            git commit --allow-empty -m "Mantieni attivi gli aggiornamenti automatici"
+            git push
+          fi
       - uses: actions/upload-pages-artifact@v3
         with:
           path: output
