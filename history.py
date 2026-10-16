@@ -117,6 +117,10 @@ def recent_results(matches: pd.DataFrame, days: int = 45) -> list[dict]:
         r = {"date": str(m["date"].date()), "home": m["home"], "away": m["away"]}
         for c in cols:
             r[c] = None if pd.isna(m[c]) else float(m[c])
+        # quote di chiusura (per misurare se hai battuto il mercato)
+        for c in ("close_h", "close_d", "close_a", "close_o25", "close_u25"):
+            v = m.get(c)
+            r[c] = None if v is None or pd.isna(v) else float(v)
         out.append(r)
     return out
 

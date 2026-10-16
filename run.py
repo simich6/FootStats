@@ -61,6 +61,11 @@ def main():
     path = report.build(preds, trends, leagues, bt, history=hist, adapt=adapt,
                         results=history.recent_results(matches), mdefs=history.market_defs(),
                         ratings=predict.export_ratings(matches))
+    try:
+        import notify
+        notify.send(preds, history.market_defs(), hist, adapt)
+    except Exception as ex:  # le notifiche non devono mai bloccare l'aggiornamento
+        print(f"  ! telegram: errore ({ex})")
     print(f"\nFatto. Apri {path} nel browser.")
 
 
