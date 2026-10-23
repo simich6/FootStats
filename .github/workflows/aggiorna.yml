@@ -29,8 +29,7 @@ jobs:
         with:
           path: data
           key: footstats-data-${{ github.run_id }}
-          restore-keys: 
-footstats-data-
+          restore-keys: footstats-data-
       - run: pip install pandas numpy scipy requests
       - name: Aggiorna dati e dashboard
         env:
