@@ -4,6 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Footstats</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2E6B4F">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Footstats">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Source+Sans+3:wght@400;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -190,6 +198,8 @@ tr.pick{cursor:pointer}
 .mrow{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:4px 10px;align-items:center;padding:7px 0;border-top:1px solid var(--line)}
 .mrow .pill{font-size:.95rem;min-width:3.2em;text-align:center}.mrow-a{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
 @media (max-width:560px){.mrow{grid-template-columns:auto minmax(0,1fr)}.mrow-a{grid-column:1/3;justify-content:flex-start}}
+table.ptab td,table.ptab th{padding:4px 5px;font-size:.84rem}table.ptab tr[data-pl]{cursor:pointer}table.ptab tr.out td{color:var(--muted);text-decoration:line-through}table.ptab tr.out td .note{text-decoration:none}
+.absent{margin-top:8px;padding-top:8px;border-top:1px solid var(--line);font-size:.88rem}
 details.alld{margin-top:18px;border-top:2px solid var(--line);padding-top:8px}details.alld>summary{cursor:pointer;list-style-position:outside}
 nav .morebtn[aria-expanded=true]{color:var(--ink)}
 #nav2{margin-top:0;border-bottom:1px dashed var(--line);background:var(--surface)}#nav2 button{font-size:1rem;padding:6px 10px}
@@ -253,6 +263,8 @@ nav .morebtn[aria-expanded=true]{color:var(--ink)}
 </footer>
 <script>
 const DATA = __DATA__;
+// previsioni "extra" (verifica della correzione clima): non entrano nelle statistiche dello storico
+const CLIMA=(DATA.history||[]).filter(h=>h.extra);DATA.history=(DATA.history||[]).filter(h=>!h.extra);
 // Partite già iniziate o finite: spariscono in base all'ora in cui apri la pagina
 const kickoff=f=>f.ko?new Date(f.ko).getTime():new Date(f.date+"T23:59:59").getTime();
 function pruneStarted(){const n=DATA.fixtures.length;DATA.fixtures=DATA.fixtures.filter(f=>kickoff(f)>Date.now());return n-DATA.fixtures.length}
@@ -889,7 +901,14 @@ function renderHistory(){
     <div class="kpi"><div class="k">Uscite</div><div class="v ${rate(wk)>=avgp(wk)?"pos":"neg"}">${pct(rate(wk))}</div><div class="d">previste ${pct(avgp(wk))}</div></div>
     ${(()=>{const g={};wk.forEach(h=>(g[h.group]??=[]).push(h));const b=Object.entries(g).filter(([,a])=>a.length>=3).sort((x,y)=>(rate(y[1])-avgp(y[1]))-(rate(x[1])-avgp(x[1])));
       return b.length?`<div class="kpi"><div class="k">Mercato migliore</div><div class="v" style="font-size:1.15rem">${esc(b[0][0])}</div><div class="d">${pct(rate(b[0][1]))} su ${b[0][1].length}</div></div>`:""})()}</div></div>`:"";
-  el.innerHTML=wkPanel+adaptPanel+`<div class="kpis">
+  const cd=CLIMA.filter(h=>h.won!=null&&inL(h.league)),br=k=>cd.reduce((a,h)=>a+(h[k]-h.won)**2,0)/cd.length;
+  const climaPanel=CLIMA.length?`<div class="panel"><h3 style="margin-top:0">Funziona la correzione "clima"?</h3>
+    <p class="note">Per le partite in cui scontri diretti o derby cambiano la stima dei cartellini, l'app salva sia la probabilità del modello sia quella corretta, e a partita finita controlla quale era più vicina al vero. Errore più basso = previsione migliore.</p>
+    ${cd.length?`<div class="kpis"><div class="kpi"><div class="k">Partite verificate</div><div class="v">${cd.length}</div><div class="d">${cd.length<30?`servono almeno 30 per giudicare`:"abbastanza per una prima idea"}</div></div>
+     <div class="kpi"><div class="k">Errore modello</div><div class="v">${br("prob").toFixed(3)}</div></div>
+     <div class="kpi"><div class="k">Errore con clima</div><div class="v ${br("clima")<=br("prob")?"pos":"neg"}">${br("clima").toFixed(3)}</div><div class="d">${cd.length<30?"in raccolta":br("clima")<br("prob")?"la correzione aiuta":"la correzione non aiuta: meglio ignorarla"}</div></div></div>`
+     :`<p class="note">${CLIMA.length} partite in attesa di risultato.</p>`}</div>`:"";
+  el.innerHTML=wkPanel+climaPanel+adaptPanel+`<div class="kpis">
     <div class="kpi"><div class="k">Previsioni verificate</div><div class="v">${done.length}</div><div class="d">${pending.length} in attesa</div></div>
     <div class="kpi"><div class="k">Uscite</div><div class="v ${rate(done)>=avgp(done)?"pos":"neg"}">${done.length?pct(rate(done)):"–"}</div><div class="d">attese: ${done.length?pct(avgp(done)):"–"}</div></div>
     <div class="kpi"><div class="k">Solo giocata principale</div><div class="v">${main.length?pct(rate(main)):"–"}</div><div class="d">su ${main.length}, attese ${main.length?pct(avgp(main)):"–"}</div></div></div>
@@ -1274,6 +1293,7 @@ function pickerHtml(lg,cur,px){let opts="",day="";
 function liftHtml(p){if(p.base==null)return"";
   return`<div class="liftbar" title="Media del campionato contro questa partita"><span class="lb-base" style="left:${p.base*100}%"></span><span class="lb-fill ${p.prob>=p.base?"up":"down"}" style="left:${Math.min(p.base,p.prob)*100}%;width:${Math.abs(p.prob-p.base)*100}%"></span></div>
     <div class="tp-w">di solito nel campionato <b>${pct(p.base)}</b> · qui <b>${pct(p.prob)}</b> (${lift(p)>=0?"+":""}${(lift(p)*100).toFixed(0)} punti)</div>`}
+const oddsLine=p=>p.odds?`<div class="tp-w">${p.nbook?`quota media ${p.odds.toFixed(2)}${p.best?` · migliore ${p.best.toFixed(2)}`:""}${p.pin?` · Pinnacle ${p.pin.toFixed(2)}`:""}`:`quota ${p.odds.toFixed(2)}`} · giusta ${p.fair_odds.toFixed(2)}${p.edge>=0.03?' <span class="tag hi">valore</span>':""}</div>`:"";
 const pickBtns=(f,p,go)=>`${go?`<button class="playbtn" data-go="${fxIdx(f)}">Apri la partita →</button> `:""}<button class="playbtn" data-pf="${fxIdx(f)}" data-pk="${esc(p.key)}">+ La gioco</button> <button class="playbtn addm" data-af="${fxIdx(f)}" data-ak="${esc(p.key)}">+ Multipla</button>`;
 function wirePicks(el){
   el.querySelectorAll("[data-go]").forEach(b=>b.addEventListener("click",()=>goMatch(DATA.fixtures[+b.dataset.go])));
@@ -1311,7 +1331,7 @@ function renderHome(){
    <div class="row toolbar" style="margin-top:6px">${seg("n",[[3,"Top 3"],[5,"Top 5"]])}${seg("days",[[3,"Weekend"],[7,"7 giorni"]])}</div>
    ${picks.length?picks.map(({f,p},i)=>`<article class="tc ${i===0?"first":""}"><div class="tc-head"><span class="rk">${i+1}</span><div><div class="tc-teams">${esc(f.home)} <span>vs</span> ${esc(f.away)}${f.big?'<span class="bigm">Big match</span>':""}${f.rivalry?`<span class="bigm hot">${esc(f.rivalry.name)}</span>`:""}</div>
       <div class="note">${esc(f.league)} · ${dShort(f)} ${esc(f.time||"")}</div></div></div>
-      <div class="tp">${ring(p.prob,true)}<div><div class="tp-l">${chipLabel(p)}</div>${liftHtml(p)}<div class="tp-w">${why(f,p)}</div>${pickBtns(f,p,true)}</div></div></article>`).join("")
+      <div class="tp">${ring(p.prob,true)}<div><div class="tp-l">${chipLabel(p)}</div>${liftHtml(p)}<div class="tp-w">${why(f,p)}</div>${oddsLine(p)}${pickBtns(f,p,true)}</div></div></article>`).join("")
      :'<p class="empty">Nessuna giocata interessante nel periodo scelto. Prova "7 giorni".</p>'}
    <h2 style="margin-top:22px">Multiple consigliate</h2>
    ${multis.length?multis.map((m,i)=>`<div class="mcard"><div class="mhead"><div>${ring(m.prob,true)}</div><div><div class="sheet-t" style="margin:0">${m.t}</div>
@@ -1367,7 +1387,7 @@ function expectTiles(f){
     const[lab,cl]=d>=.12?["Molti","hi"]:d>=.05?["Sopra media","hi"]:d<=-.12?["Pochi","lo"]:d<=-.05?["Sotto media","lo"]:["Nella media","mid"];
     return`<div class="kpi"><div class="k">${STAT[s]}</div><div class="v">${t.toFixed(1)}</div><div class="d"><span class="tag ${cl}">${lab}</span> media ${m.toFixed(1)} (${d>=0?"+":"−"}${Math.abs(d*100).toFixed(0)}%)</div></div>`}).join("")}</div>`}
 function climate(f){const E=f.expected.cards,EF=f.expected.fouls;if(!E)return null;
-  const e=E[0]+E[1],al=f.alpha?.cards||0,h=f.h2h||{n:0,games:[]},hg=h.games.filter(g=>g.cards!=null),K=6;
+  const e=E[0]+E[1],al=f.alpha?.cards||0,h=f.h2h||{n:0,games:[]},hg=h.games.filter(g=>g.cards!=null),K=10;
   const df=f.rivalry?.cards||1,obs=hg.reduce((a,g)=>a+g.cards,0);
   const fac=(obs+K*e*df)/((hg.length+K)*e);
   const over=(line,fc)=>{const p=conv(nbPmf(E[0]*fc,al,20),nbPmf(E[1]*fc,al,20));return p.reduce((a,v,k)=>k>line?a+v:a,0)};
@@ -1393,6 +1413,14 @@ function climateHtml(f){const C=climate(f);if(!C)return'<p class="note">Dati su 
     ${C.ef?`<div class="kpi"><div class="k">Falli attesi</div><div class="v">${C.ef.toFixed(1)}</div><div class="d">media campionato ${f.lavg?.fouls??"–"}</div></div>`:""}</div>
    ${tips.map(([c,i,t])=>`<div class="tip ${c}"><span class="ti">${i}</span><div>${t}</div></div>`).join("")}
    <p class="note">La correzione per scontri diretti e derby è prudente: con pochi precedenti pesa poco. Non è verificata nel backtest come il resto del modello, quindi usala come indicazione. Se conosci l'arbitro, inseriscilo in "Tutti i dati" qui sotto.</p>`}
+function sotRatio(f,i){const E=f.expected.sot,t=i?f.away:f.home,base=avgG(t,"sot",0,20)||E[i];return Math.max(.6,Math.min(1.6,E[i]/base))}
+const poisGe=(lam,k)=>{let s=0,term=Math.exp(-lam);for(let j=0;j<k;j++){s+=term;term*=lam/(j+1)}return 1-s};
+function playersHtml(f,i){const L=f.players?.[i];if(!L||!L.length)return"";const r=sotRatio(f,i);
+  const POS={G:"Por",D:"Dif",M:"Cen",A:"Att"};
+  return`<div class="scroll" style="margin-top:8px"><table class="ptab"><tr><th>Giocatore</th><th>Pres.</th><th title="Tiri in porta a partita">TP/p</th><th>1+</th><th>2+</th></tr>
+   ${L.filter(p=>p.sot>0).slice(0,8).map(p=>{const avg=p.sot/p.apps,lam=avg*r;
+     return`<tr class="${p.out?"out":""}" data-pl="${i}" data-avg="${avg.toFixed(2)}" title="Tocca per usarlo nel calcolatore"><td>${esc(p.n)} <span class="note">${POS[p.pos]||""}${p.out?" · assente":""}</span></td><td>${p.apps}<span class="note"> · ${Math.round(p.min/p.apps)}'</span></td><td>${avg.toFixed(2)}</td><td>${p.out?"–":pct(poisGe(lam,1))}</td><td>${p.out?"–":pct(poisGe(lam,2))}</td></tr>`}).join("")}</table></div>
+   <p class="note" style="margin:2px 0 0">Dati della stagione nel campionato, adattati a questa partita. Vale per chi gioca i suoi minuti abituali.</p>`}
 function sotHtml(f){const E=f.expected.sot;if(!E)return'<p class="note">Tiri in porta non disponibili per questo campionato.</p>';
   const al=f.alpha?.sot||0,teams=[f.home,f.away];
   const ge=(i,k)=>nbPmf(E[i],al,25).reduce((a,v,j)=>j>=k?a+v:a,0);
@@ -1400,7 +1428,7 @@ function sotHtml(f){const E=f.expected.sot;if(!E)return'<p class="note">Tiri in 
     return`<div class="panel" style="margin:0"><div class="tc-teams" style="font-size:1.15rem">${esc(t)}</div>
       <div class="kpi" style="border:0;padding:4px 0"><div class="v">${E[i].toFixed(1)}</div><div class="k">tiri in porta attesi</div></div>
       <div class="row" style="gap:4px">${[3,4,5,6].map(k=>`<span class="chip">${k}+ <b>${pct(ge(i,k))}</b></span>`).join("")}</div>
-      <p class="note" style="margin:6px 0 0">Ultime 10: ne fa ${m!=null?m.toFixed(1):"–"} a partita · ${esc(o)} ne concede ${c!=null?c.toFixed(1):"–"}</p></div>`};
+      <p class="note" style="margin:6px 0 0">Ultime 10: ne fa ${m!=null?m.toFixed(1):"–"} a partita · ${esc(o)} ne concede ${c!=null?c.toFixed(1):"–"}</p>${playersHtml(f,i)}</div>`};
   return`<div class="grid2">${card(0)}${card(1)}</div>
    <div class="calc" style="margin-top:12px"><b>Tiri in porta di un giocatore</b>
     <p class="note" style="margin:2px 0 6px">Prendi la media tiri in porta a partita del giocatore (es. da Sofascore o FBref). L'app la adatta a questa partita: se la squadra tirerà più del solito, anche lui.</p>
@@ -1410,7 +1438,7 @@ function sotHtml(f){const E=f.expected.sot;if(!E)return'<p class="note">Tiri in 
 function sotPlayer(el,f){const E=f.expected.sot,i=+el.querySelector(".pT").value,v=parseFloat(String(el.querySelector(".pA").value).replace(",","."));
   PT.pteam=i;PT.pavg=el.querySelector(".pA").value;const out=el.querySelector(".pR");
   if(!(v>0)){out.innerHTML='<span class="note">Inserisci la media del giocatore.</span>';return}
-  const t=i?f.away:f.home,base=avgG(t,"sot",0,20)||E[i],r=Math.max(.6,Math.min(1.6,E[i]/base)),lam=v*r;
+  const r=sotRatio(f,i),lam=v*r;
   const P=k=>{let s=0,term=Math.exp(-lam);for(let j=0;j<k;j++){s+=term;term*=lam/(j+1)}return 1-s};
   out.innerHTML=`Attesi in questa partita: <b>${lam.toFixed(2)}</b> (la squadra tirerà ${r>=1?"+":"−"}${Math.abs((r-1)*100).toFixed(0)}% rispetto alle sue ultime partite)
     <div class="row" style="gap:6px;margin-top:6px;font-size:1rem">${[1,2,3].map(k=>`<span class="chip">${k}+ <b>${pct(P(k))}</b> · quota giusta ${(1/P(k)).toFixed(2)}</span>`).join("")}</div>
@@ -1421,7 +1449,7 @@ function favHtml(f){
     const ps=f.picks.filter(p=>family(p.key)===k&&p.prob>=.25&&p.prob<=.92).sort((a,b)=>hscore(b)-hscore(a));if(!ps.length)return"";
     const open=PT.open[k],show=open?ps:ps.slice(0,3);
     return`<div class="fam"><h3>${l}</h3>${show.map(p=>`<div class="mrow"><span class="pill">${pct(p.prob)}</span><div class="mrow-t"><b>${chipLabel(p)}</b> <span class="dot ${p.reliability}" title="affidabilità del mercato"></span>
-      <div class="note">${p.base!=null?`di solito ${pct(p.base)} · ${lift(p)>=0?"+":""}${(lift(p)*100).toFixed(0)} punti · `:""}quota giusta ${p.fair_odds.toFixed(2)}</div></div><div class="mrow-a">${pickBtns(f,p,false)}</div></div>`).join("")}
+      <div class="note">${p.base!=null?`di solito ${pct(p.base)} · ${lift(p)>=0?"+":""}${(lift(p)*100).toFixed(0)} punti · `:""}quota giusta ${p.fair_odds.toFixed(2)}${p.odds?` · quota ${p.nbook?"media ":""}${p.odds.toFixed(2)}${p.edge>=0.03?' <span class="tag hi">valore</span>':""}`:""}</div></div><div class="mrow-a">${pickBtns(f,p,false)}</div></div>`).join("")}
       ${ps.length>3?`<button class="more" data-fo="${k}">${open?"Mostra meno ▴":`Mostra tutte (${ps.length}) ▾`}</button>`:""}</div>`}).join("");
   return`<div class="row" style="gap:6px;margin-bottom:8px">${chips}</div>${blocks||'<p class="note">Scegli almeno un mercato.</p>'}
    <p class="note">In cima a ogni mercato le giocate dove questa partita si discosta di più dalla media, a parità di probabilità ragionevole. Il pallino è l'affidabilità del mercato nel backtest.</p>`}
@@ -1445,9 +1473,10 @@ function renderMatch(){
   el.innerHTML=`${pickerHtml(PT.league,PT.fid,"p")}
    <div class="panel mhero"><div class="teams"><span>${esc(f.home)}${miniForm(f.home)}</span><span class="meta">${esc(f.league)}<br>${dShort(f)} ${esc(f.time||"")}${f.big?'<br><span class="bigm" style="margin:2px 0 0">Big match</span>':""}${f.rivalry?`<br><span class="bigm hot" style="margin:2px 0 0">${esc(f.rivalry.name)}</span>`:""}</span><span class="a">${esc(f.away)}${miniForm(f.away)}</span></div>
     <div class="bar" role="img" aria-label="1 ${pct(h)}, X ${pct(d)}, 2 ${pct(a)}"><span class="h" style="flex:${h*100}">1 ${pct(h)}</span><span class="d" style="flex:${d*100}">X ${pct(d)}</span><span class="x" style="flex:${a*100}">2 ${pct(a)}</span></div>
-    <p class="note" style="margin:8px 0 0;text-align:center">Gol attesi <b>${eg?eg[0].toFixed(1)+" – "+eg[1].toFixed(1):"–"}</b>${top?` · risultato più probabile <b>${top[0]}-${top[1]}</b> (${(top[2]*100).toFixed(0)}%)`:""}${f.new_team.some(Boolean)?" · ⚠ una squadra senza storico nel campionato: stime meno affidabili":""}</p></div>
+    <p class="note" style="margin:8px 0 0;text-align:center">Gol attesi <b>${eg?eg[0].toFixed(1)+" – "+eg[1].toFixed(1):"–"}</b>${top?` · risultato più probabile <b>${top[0]}-${top[1]}</b> (${(top[2]*100).toFixed(0)}%)`:""}${f.new_team.some(Boolean)?" · ⚠ una squadra senza storico nel campionato: stime meno affidabili":""}</p>
+    ${f.absent&&f.absent.some(a=>a.length)?`<div class="absent">${[0,1].map(k=>f.absent[k].length?`<div><b>Assenti ${esc(k?f.away:f.home)}:</b> ${f.absent[k].map(p=>`${esc(p.n)}${p.type&&/questionable/i.test(p.type)?" (in dubbio)":""}`).join(", ")}</div>`:"").join("")}</div>`:""}</div>
    <h2>Le migliori per questa partita</h2>
-   ${best.length?best.map((p,i)=>`<div class="tp" style="border-top:${i?"1px solid var(--line)":"0"}">${ring(p.prob,i===0)}<div><div class="tp-l">${chipLabel(p)}</div>${liftHtml(p)}<div class="tp-w">${why(f,p)}</div>${pickBtns(f,p,false)}</div></div>`).join("")
+   ${best.length?best.map((p,i)=>`<div class="tp" style="border-top:${i?"1px solid var(--line)":"0"}">${ring(p.prob,i===0)}<div><div class="tp-l">${chipLabel(p)}</div>${liftHtml(p)}<div class="tp-w">${why(f,p)}</div>${oddsLine(p)}${pickBtns(f,p,false)}</div></div>`).join("")
      :'<p class="note">Nessuna giocata si discosta abbastanza dalla media del campionato: partita "normale". Guarda i tuoi mercati qui sotto.</p>'}
    <h2 style="margin-top:20px">Attacco contro difesa</h2>
    <div class="row toolbar"><span class="seg" role="group">${MS.map(([s,l])=>`<button aria-pressed="${PT.ms===s}" data-ms="${s}">${l}</button>`).join("")}</span></div>
@@ -1466,6 +1495,8 @@ function renderMatch(){
   el.querySelectorAll("[data-fav]").forEach(b=>b.addEventListener("click",()=>{const k=b.dataset.fav;FAV.has(k)?FAV.delete(k):FAV.add(k);
     try{localStorage.setItem(FKEY,JSON.stringify([...FAV]))}catch(e){}const y=window.scrollY;renderMatch();window.scrollTo(0,y)}));
   el.querySelectorAll("[data-fo]").forEach(b=>b.addEventListener("click",()=>{PT.open[b.dataset.fo]=!PT.open[b.dataset.fo];const y=window.scrollY;renderMatch();window.scrollTo(0,y)}));
+  el.querySelectorAll("[data-pl]").forEach(tr=>tr.addEventListener("click",()=>{PT.pteam=+tr.dataset.pl;PT.pavg=tr.dataset.avg;const pc=el.querySelector(".calc");
+    pc.querySelector(".pT").value=PT.pteam;pc.querySelector(".pA").value=PT.pavg;sotPlayer(pc,f);pc.scrollIntoView({behavior:"smooth",block:"center"})}));
   const pc=el.querySelector(".calc");if(pc){const go=()=>sotPlayer(pc,f);pc.querySelector(".pT").addEventListener("change",go);pc.querySelector(".pA").addEventListener("input",go);go()}
   $("pAsk").addEventListener("click",()=>askSheet(f));
   $("pAn").addEventListener("click",()=>{AN.league=f.league;AN.home=f.home;AN.away=f.away;AN.date=f.date;goTab("analyze")});
@@ -1498,6 +1529,8 @@ document.querySelectorAll("nav button[data-tab]").forEach(b=>b.addEventListener(
 $("moreBtn").addEventListener("click",()=>{const o=$("nav2").hidden;$("nav2").hidden=!o;$("moreBtn").setAttribute("aria-expanded",String(o))});
 document.querySelectorAll(".filters select,.filters input").forEach(x=>x.addEventListener("input",render));
 setInterval(()=>{if(pruneStarted()){setUpdated();render()}},60000);
+// App installabile sul telefono (solo sul sito pubblicato su GitHub Pages)
+if("serviceWorker" in navigator&&location.hostname.endsWith("github.io"))navigator.serviceWorker.register("sw.js").catch(()=>{});
 render();
 </script>
 </body>
