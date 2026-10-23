@@ -6,6 +6,7 @@ import backtest
 import config
 import markets as mk
 import model
+import quote as qt
 import rivalita
 
 
@@ -60,7 +61,27 @@ def base_rates(hist: pd.DataFrame, today: pd.Timestamp) -> dict:
     return out
 
 
-def predict_fixtures(matches: pd.DataFrame, fixtures: pd.DataFrame, bt: dict | None) -> list[dict]:
+def climate(d, r, picks, h2h, derby_factor, k=10.0):
+    """Cartellini: correzione prudente per scontri diretti e derby (la stessa che mostra la dashboard).
+    Gli scontri diretti contano come k partite "normali" in più, che hanno già il fattore derby."""
+    if not d or r is None:
+        return None
+    eh, ea = d["exp_h"], d["exp_a"]
+    e = eh + ea
+    obs = [g["cards"] for g in h2h["games"] if g.get("cards") is not None]
+    fac = (sum(obs) + k * e * derby_factor) / ((len(obs) + k) * e)
+
+    def over(line, f):
+        t = np.convolve(model.pmf(eh * f, r.alpha, 20), model.pmf(ea * f, r.alpha, 20))
+        return float(t[int(line) + 1:].sum())
+    line = min((2.5, 3.5, 4.5, 5.5), key=lambda ln: abs(over(ln, 1) - 0.5))
+    pm = next((p["prob"] for p in picks if p["key"] == f"cards_total_o{line}"), over(line, 1))
+    pc = float(np.clip(pm + over(line, fac) - over(line, 1), 0.01, 0.99))
+    return {"line": line, "fac": round(float(fac), 3), "pm": round(pm, 4), "pc": round(pc, 4),
+            "e": round(float(e), 2), "hot": round(float(e * fac / (r.mu_home + r.mu_away) - 1), 3)}
+
+
+def predict_fixtures(matches: pd.DataFrame, fixtures: pd.DataFrame, bt: dict | None, quotes: dict | None = None) -> list[dict]:
     metrics = {m["market"]: m for m in (bt or {}).get("metrics", [])}
     iso = (bt or {}).get("iso", {})
     out = []
@@ -92,12 +113,20 @@ def predict_fixtures(matches: pd.DataFrame, fixtures: pd.DataFrame, bt: dict | N
                         "hist_hit": round(mrow["hit_rate"], 3) if mrow else None,
                         "base": base.get(mdef["key"])}
                 fi = mk.fair_implied(f, mdef["key"])
-                if fi:
+                q = (quotes or {}).get(f"{league}|{f['home']}|{f['away']}")
+                qi = qt.implied(q, mdef["key"]) if q else None
+                if qi:
+                    odds, implied, info = qi  # quote vere di oggi: più fresche di quelle del file
+                    pick.update(best=info["best"], pin=info["pin"], nbook=info["n"])
+                elif fi:
                     odds, implied = fi
+                if qi or fi:
                     pick.update(odds=round(float(odds), 2), implied=round(implied, 4),
                                 edge=round(p - implied, 4), ev=round(p * odds - 1, 4))
                 picks.append(pick)
             ko, hhmm = _ko(f)
+            h2h = rivalita.head_to_head(matches, f["home"], f["away"])
+            der = rivalita.derby(f["home"], f["away"])
             out.append({
                 "league": config.LEAGUES[league], "code": league, "date": str(f["date"].date()), "time": hhmm, "ko": ko,
                 "home": f["home"], "away": f["away"], "new_team": [nh == 0, na == 0],
@@ -105,12 +134,14 @@ def predict_fixtures(matches: pd.DataFrame, fixtures: pd.DataFrame, bt: dict | N
                 "expected": {s: [round(d["exp_h"], 2), round(d["exp_a"], 2)] for s, d in dist.items()},
                 "alpha": {s: round(r.alpha, 4) for s, r in ratings.items()},
                 "lavg": {s: round(r.mu_home + r.mu_away, 2) for s, r in ratings.items()},
+                "lside": {s: [round(r.mu_home, 3), round(r.mu_away, 3)] for s, r in ratings.items()},
                 "dist": {s: _trim(d["total"]) for s, d in dist.items()},
                 "scores": _scores(dist.get("goals")),
                 "picks": picks,
-                "h2h": rivalita.head_to_head(matches, f["home"], f["away"]),
-                "rivalry": (lambda n: {"name": n, "cards": dfac["cards"]["factor"], "fouls": dfac["fouls"]["factor"],
-                                       "n": dfac["cards"]["n"]} if n else None)(rivalita.derby(f["home"], f["away"])),
+                "h2h": h2h,
+                "rivalry": {"name": der, "cards": dfac["cards"]["factor"], "fouls": dfac["fouls"]["factor"],
+                            "n": dfac["cards"]["n"]} if der else None,
+                "climate": climate(dist.get("cards"), ratings.get("cards"), picks, h2h, dfac["cards"]["factor"] if der else 1.0),
             })
     return out
 

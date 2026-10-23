@@ -37,4 +37,35 @@ def build(fixtures: list, trends: dict, leagues: dict, bt: dict | None, demo: bo
     config.OUTPUT_DIR.mkdir(exist_ok=True)
     out = config.OUTPUT_DIR / "dashboard.html"
     out.write_text(html, encoding="utf-8")
+    write_app_files()
     return str(out)
+
+
+MANIFEST = {
+    "name": "Footstats", "short_name": "Footstats", "lang": "it",
+    "start_url": ".", "scope": ".", "display": "standalone",
+    "background_color": "#EEF1EC", "theme_color": "#2E6B4F",
+    "icons": [{"src": "icon-192.png", "sizes": "192x192", "type": "image/png"},
+              {"src": "icon-512.png", "sizes": "512x512", "type": "image/png"},
+              {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}],
+}
+
+# Prima prova la rete (dati sempre freschi); senza connessione mostra l'ultima versione scaricata.
+SERVICE_WORKER = """const C="footstats-v1";
+self.addEventListener("install",e=>self.skipWaiting());
+self.addEventListener("activate",e=>e.waitUntil(self.clients.claim()));
+self.addEventListener("fetch",e=>{const r=e.request;if(r.method!=="GET"||new URL(r.url).origin!==location.origin)return;
+  e.respondWith(fetch(r).then(res=>{const cp=res.clone();caches.open(C).then(c=>c.put(r,cp));return res}).catch(()=>caches.match(r)))});
+"""
+
+
+def write_app_files() -> None:
+    """File per installare la dashboard come app sul telefono (icona nella schermata home)."""
+    import shutil
+    config.OUTPUT_DIR.mkdir(exist_ok=True)
+    (config.OUTPUT_DIR / "manifest.json").write_text(json.dumps(MANIFEST, ensure_ascii=False), encoding="utf-8")
+    (config.OUTPUT_DIR / "sw.js").write_text(SERVICE_WORKER, encoding="utf-8")
+    for name in ("icon-192.png", "icon-512.png", "apple-touch-icon.png"):
+        src = config.ROOT / "templates" / name
+        if src.exists():
+            shutil.copy(src, config.OUTPUT_DIR / name)

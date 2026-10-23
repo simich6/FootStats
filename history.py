@@ -45,6 +45,23 @@ def top_candidates(preds: list[dict], has_backtest: bool) -> list[dict]:
     return out
 
 
+def climate_candidates(preds: list[dict]) -> list[dict]:
+    """Per verificare nel tempo se la correzione "clima" (scontri diretti e derby) migliora le previsioni
+    sui cartellini: salva sia la probabilità del modello sia quella corretta. Non entrano nelle statistiche
+    del Top né nell'apprendimento adattivo ("extra")."""
+    out = []
+    for f in preds:
+        c = f.get("climate")
+        if not c or abs(c["pc"] - c["pm"]) < 0.01 or any(f["new_team"]):
+            continue
+        key = f"cards_total_o{c['line']}"
+        out.append({"id": f"{f['date']}|{f['home']}|{f['away']}|clima", "date": f["date"], "league": f["league"],
+                    "code": f["code"], "home": f["home"], "away": f["away"], "key": key, "group": "Clima",
+                    "label": f"Over {c['line']} cartellini", "prob": c["pm"], "clima": c["pc"],
+                    "derby": bool(f.get("rivalry")), "extra": True, "won": None})
+    return out
+
+
 def _remote_url() -> str | None:
     repo = os.environ.get("GITHUB_REPOSITORY")  # es. simich6/FootStats, presente solo su GitHub
     if not repo:
@@ -148,7 +165,7 @@ def adaptive(history: list[dict]) -> dict:
     out = {}
     groups: dict[str, list] = {}
     for h in history:
-        if h.get("won") is not None:
+        if h.get("won") is not None and not h.get("extra"):
             groups.setdefault(h["group"], []).append(h)
     for g, rows in groups.items():
         n = len(rows)

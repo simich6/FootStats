@@ -106,11 +106,50 @@ def _label(p: dict) -> str:
     return f"{l} {g.lower()}"
 
 
+def signals(preds: list[dict], days: int = 3, n: int = 8) -> list[tuple[float, str]]:
+    """Segnali sui mercati preferiti: squadre che dovrebbero tirare molto in porta (attacco forte contro
+    difesa che concede), partite da tiri in porta, clima caldo per i cartellini, quote con valore."""
+    lim = str(date.today() + timedelta(days=days - 1))
+    e = html.escape
+    out = []
+    for f in preds:
+        if f["date"] > lim or any(f["new_team"]):
+            continue
+        when = f"{f['date'][8:]}/{f['date'][5:7]}"
+        match = f"{e(f['home'])}–{e(f['away'])}"
+        ex, ls = f.get("expected", {}).get("sot"), f.get("lside", {}).get("sot")
+        if ex and ls:
+            for i, t in enumerate((f["home"], f["away"])):
+                r = ex[i] / ls[i]
+                if r >= 1.25:
+                    out.append((r - 1, f"🎯 <b>{e(t)}</b> ({match}, {when}): {ex[i]:.1f} tiri in porta attesi, +{(r - 1) * 100:.0f}% sulla media"))
+            tot = (ex[0] + ex[1]) / (ls[0] + ls[1])
+            if tot >= 1.18:
+                out.append((tot - 1, f"🔥 {match} ({when}): partita da tiri in porta, {ex[0] + ex[1]:.1f} attesi (+{(tot - 1) * 100:.0f}%)"))
+        c = f.get("climate")
+        if c and (c["hot"] >= 0.15 or (f.get("rivalry") and c["hot"] >= 0.05)):
+            der = f" · {e(f['rivalry']['name'])}" if f.get("rivalry") else ""
+            out.append((c["hot"], f"🟨 {match} ({when}){der}: clima caldo, Over {c['line']} cartellini {c['pc'] * 100:.0f}%"))
+        for p in f["picks"]:
+            if p.get("edge") is not None and p.get("nbook") and p["edge"] >= 0.05 and 0.35 <= p["prob"] <= 0.8 and p.get("reliability") != "red":
+                best = f" (migliore {p['best']:.2f})" if p.get("best") else ""
+                out.append((p["edge"] * 2, f"💰 {match} ({when}): {e(_label(p))} al {p['prob'] * 100:.0f}%, "
+                                           f"quota media {p['odds']:.2f}{best} contro quota giusta {1 / p['prob']:.2f}"))
+    chosen, per = [], {}
+    for sc, t in sorted(out, key=lambda x: -x[0]):
+        kind = t[0]
+        if per.get(kind, 0) < 2 and len(chosen) < n:  # al massimo 2 segnali dello stesso tipo
+            chosen.append((sc, t))
+            per[kind] = per.get(kind, 0) + 1
+    return chosen
+
+
 def daily_message(preds, mdefs) -> str | None:
     picks, when = best_picks(preds, mdefs, days=3), "dei prossimi 3 giorni"
     if not picks:
         picks, when = best_picks(preds, mdefs, days=7), "della settimana"
-    if not picks:
+    sig = signals(preds)
+    if not picks and not sig:
         return None
     e = html.escape
     lines = [f"⚽ <b>Footstats – giocate da partita {when}</b>", ""]
@@ -118,6 +157,8 @@ def daily_message(preds, mdefs) -> str | None:
         lines.append(f"<b>{i}. {e(f['home'])} – {e(f['away'])}</b> ({e(f['league'])}, {f['date'][8:]}/{f['date'][5:7]} {e(f.get('time') or '')})")
         lines.append(f"   {e(_label(p))}: <b>{p['prob']*100:.0f}%</b> · quota giusta {1/p['prob']:.2f}")
         lines.append(f"   media campionato {p['base']*100:.0f}% (+{lift*100:.0f} punti)")
+    if sig:
+        lines += ["", "<b>Segnali sui tuoi mercati</b>"] + [t for _, t in sig]
     lines += ["", "Gioca solo se la quota del bookmaker supera la quota giusta."]
     if _app_url():
         lines.append(f'<a href="{_app_url()}">Apri Footstats</a>')
@@ -126,7 +167,7 @@ def daily_message(preds, mdefs) -> str | None:
 
 def weekly_message(history: list[dict], adapt: dict) -> str | None:
     since = str(date.today() - timedelta(days=7))
-    done = [h for h in history if h.get("won") is not None and h["date"] >= since]
+    done = [h for h in history if h.get("won") is not None and h["date"] >= since and not h.get("extra")]
     if not done:
         return None
     hit = sum(h["won"] for h in done) / len(done)

@@ -43,7 +43,20 @@ def main():
 
     print("4/4 Previsioni e dashboard")
     fixtures = provider.fixtures(matches)
-    preds = predict.predict_fixtures(matches, fixtures, bt) if len(fixtures) else []
+    import giocatori
+    import quote
+    quotes = {}
+    if not args.offline:
+        try:  # le fonti extra non devono mai bloccare l'aggiornamento
+            quotes = quote.update(fixtures)
+        except Exception as ex:
+            print(f"  ! quote: errore ({ex})")
+    preds = predict.predict_fixtures(matches, fixtures, bt, quotes) if len(fixtures) else []
+    if not args.offline:
+        try:
+            giocatori.attach(preds, giocatori.update(fixtures, matches))
+        except Exception as ex:
+            print(f"  ! giocatori: errore ({ex})")
     trends = predict.team_trends(matches)
     leagues = predict.league_trends(matches)
     (config.OUTPUT_DIR).mkdir(exist_ok=True)
@@ -53,7 +66,7 @@ def main():
     active = {g: a["k"] for g, a in adapt.items() if a["active"]}
     (config.OUTPUT_DIR / "predictions.json").write_text(json.dumps(preds, ensure_ascii=False, default=float))
     print(f"    correzioni adattive attive: {active or 'nessuna (servono 50 previsioni verificate per mercato)'}")
-    hist = history.update(past, history.top_candidates(preds, bt is not None), matches)
+    hist = history.update(past, history.top_candidates(preds, bt is not None) + history.climate_candidates(preds), matches)
     history.save(hist)
     done = [h for h in hist if h["won"] is not None]
     print(f"    storico: {len(hist)} previsioni, {len(done)} verificate")
