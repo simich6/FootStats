@@ -6,6 +6,7 @@ import backtest
 import config
 import markets as mk
 import model
+import rivalita
 
 
 def _confidence(market_row: dict | None, n_home: int, n_away: int) -> float:
@@ -65,6 +66,7 @@ def predict_fixtures(matches: pd.DataFrame, fixtures: pd.DataFrame, bt: dict | N
     out = []
     today = pd.Timestamp.today().normalize()
     fixtures = fixtures[fixtures["date"] >= today]
+    dfac = rivalita.derby_factors(matches)
     for league, fx in fixtures.groupby("league"):
         hist = matches[matches["league"] == league]
         ratings = model.fit_all(hist, today + pd.Timedelta(days=1))
@@ -106,6 +108,9 @@ def predict_fixtures(matches: pd.DataFrame, fixtures: pd.DataFrame, bt: dict | N
                 "dist": {s: _trim(d["total"]) for s, d in dist.items()},
                 "scores": _scores(dist.get("goals")),
                 "picks": picks,
+                "h2h": rivalita.head_to_head(matches, f["home"], f["away"]),
+                "rivalry": (lambda n: {"name": n, "cards": dfac["cards"]["factor"], "fouls": dfac["fouls"]["factor"],
+                                       "n": dfac["cards"]["n"]} if n else None)(rivalita.derby(f["home"], f["away"])),
             })
     return out
 
