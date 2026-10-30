@@ -16,6 +16,7 @@ STAT_COLUMNS = {
     "HC": "h_corners", "AC": "a_corners",
     "HY": "h_yellow", "AY": "a_yellow",
     "HR": "h_red", "AR": "a_red",
+    "HTHG": "h_ht", "HTAG": "a_ht",  # gol del primo tempo
 }
 
 # Per ogni quota prendiamo la prima colonna disponibile (media mercato, poi Bet365, poi Pinnacle)
@@ -94,6 +95,8 @@ def normalize(raw: pd.DataFrame, league: str, season: str | None) -> pd.DataFram
         df[dst] = pd.to_numeric(raw[src], errors="coerce") if src in raw.columns else np.nan
     df["h_cards"] = df["h_yellow"] + df["h_red"]
     df["a_cards"] = df["a_yellow"] + df["a_red"]
+    df["h_sh"] = df["h_goals"] - df["h_ht"]  # gol del secondo tempo
+    df["a_sh"] = df["a_goals"] - df["a_ht"]
     df = pd.concat([df, _pick_odds(raw)], axis=1)
     return df.dropna(subset=["date"])
 

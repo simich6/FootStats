@@ -35,7 +35,9 @@ def main():
         print("   Taratura del modello")
         backtest.tune(matches)
     bt = backtest.load()
-    if args.backtest or tuned or bt is None:
+    import markets
+    if args.backtest or tuned or bt is None or bt.get("mv") != markets.MARKETS_VERSION \
+            or not (config.DATA_DIR / "profili.csv").exists():
         print("3/4 Backtest walk-forward (una tantum, qualche minuto)")
         bt = backtest.run(matches)
     else:

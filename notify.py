@@ -99,6 +99,8 @@ def best_picks(preds: list[dict], mdefs: dict, days: int = 2, n: int = 5) -> lis
 
 def _label(p: dict) -> str:
     g, l = p["group"], p["label"]
+    if g in ("Primo tempo", "Secondo tempo"):
+        return l
     if g == "Esito finale":
         return f"Esito {l}"
     if g == "Gol":

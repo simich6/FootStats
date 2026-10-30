@@ -15,11 +15,12 @@ from scipy.stats import nbinom, poisson
 
 import config
 
-STATS = ["goals", "shots", "sot", "corners", "fouls", "cards"]
-MAX_COUNT = {"goals": 10, "shots": 55, "sot": 25, "corners": 25, "fouls": 50, "cards": 14}
+STATS = ["goals", "shots", "sot", "corners", "fouls", "cards", "ht", "sh"]  # ht/sh = gol primo/secondo tempo
+MAX_COUNT = {"goals": 10, "shots": 55, "sot": 25, "corners": 25, "fouls": 50, "cards": 14, "ht": 8, "sh": 8}
 # Prior per squadre senza storico (es. neopromosse): producono un po' meno e concedono un po' di più
 NEW_TEAM_PRIOR = {"goals": (0.85, 1.15), "shots": (0.9, 1.1), "sot": (0.88, 1.12),
-                  "corners": (0.92, 1.08), "fouls": (1.0, 1.0), "cards": (1.0, 1.0)}
+                  "corners": (0.92, 1.08), "fouls": (1.0, 1.0), "cards": (1.0, 1.0),
+                  "ht": (0.85, 1.15), "sh": (0.85, 1.15)}
 
 
 @dataclass

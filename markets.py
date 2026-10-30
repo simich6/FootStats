@@ -2,7 +2,8 @@
 import numpy as np
 
 GROUP = {"goals": "Gol", "corners": "Calci d'angolo", "cards": "Cartellini",
-         "fouls": "Falli", "shots": "Tiri totali", "sot": "Tiri in porta"}
+         "fouls": "Falli", "shots": "Tiri totali", "sot": "Tiri in porta", "ht": "Primo tempo", "sh": "Secondo tempo"}
+MARKETS_VERSION = 2  # se cambia l'elenco delle giocate, il backtest viene rifatto
 
 
 def _m(key, group, label, stat, kind, *args):
@@ -58,6 +59,19 @@ MARKETS = [
     *_ou("sot", [6.5, 7.5, 8.5, 9.5]),
     *_ou("sot", [2.5, 3.5, 4.5, 5.5], "home"),
     *_ou("sot", [2.5, 3.5, 4.5], "away"),
+    # primo e secondo tempo
+    _m("HT1", "Primo tempo", "1T 1", "ht", "result", "H"),
+    _m("HTX", "Primo tempo", "1T X", "ht", "result", "D"),
+    _m("HT2", "Primo tempo", "1T 2", "ht", "result", "A"),
+    _m("HTGG", "Primo tempo", "1T Goal", "ht", "btts", True),
+    _m("HTNG", "Primo tempo", "1T No Goal", "ht", "btts", False),
+    *_ou("ht", [0.5, 1.5, 2.5], prefix="1T "),
+    *_ou("ht", [0.5], "home", prefix="1T "),
+    *_ou("ht", [0.5], "away", prefix="1T "),
+    *_ou("sh", [0.5, 1.5, 2.5], prefix="2T "),
+    _m("HM1", "Primo tempo", "Più gol nel 1° tempo", "ht", "half_more", "1"),
+    _m("HM2", "Primo tempo", "Più gol nel 2° tempo", "ht", "half_more", "2"),
+    _m("HMX", "Primo tempo", "Stessi gol nei due tempi", "ht", "half_more", "X"),
 ]
 
 
@@ -66,6 +80,15 @@ def probability(m: dict, dist: dict) -> float | None:
     if d is None:
         return None
     kind, args = m["kind"], m["args"]
+    if kind == "half_more":
+        if "sh" not in dist:
+            return None
+        t1, t2 = d["total"], dist["sh"]["total"]
+        c2 = np.concatenate([[0.0], np.cumsum(t2)])  # c2[i] = P(2T < i)
+        n = len(t1)
+        p1 = float(sum(t1[i] * c2[min(i, len(t2))] for i in range(n)))  # 1T > 2T
+        px = float(sum(t1[i] * t2[i] for i in range(min(n, len(t2)))))
+        return {"1": p1, "X": px, "2": 1 - p1 - px}[args[0]]
     if kind in ("result", "btts"):
         joint = d["joint"] if "joint" in d else np.outer(d["ph"], d["pa"])
         if kind == "result":
@@ -85,9 +108,12 @@ def probability(m: dict, dist: dict) -> float | None:
 def outcome(m: dict, row) -> float:
     """1 se la giocata è vinta, 0 se persa, NaN se il dato non c'è."""
     h, a = row[f"h_{m['stat']}"], row[f"a_{m['stat']}"]
-    if np.isnan(h) or np.isnan(a):
+    if h is None or a is None or np.isnan(h) or np.isnan(a):
         return np.nan
     kind, args = m["kind"], m["args"]
+    if kind == "half_more":
+        t1, t2 = h + a, row["h_goals"] + row["a_goals"] - h - a
+        return float({"1": t1 > t2, "X": t1 == t2, "2": t2 > t1}[args[0]])
     if kind == "result":
         res = "H" if h > a else "D" if h == a else "A"
         return float(res in args[0])

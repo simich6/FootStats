@@ -15,7 +15,7 @@ import model
 
 def walk_forward(matches: pd.DataFrame, test_seasons: list | None = None, quiet: bool = False) -> pd.DataFrame:
     test_seasons = test_seasons or sorted(matches["season"].unique())[-config.BACKTEST_SEASONS:]
-    rows = []
+    rows, profiles = [], []
     for league, lg in matches.groupby("league"):
         lg = lg.sort_values("date")
         test = lg[lg["season"].isin(test_seasons)]
@@ -26,6 +26,12 @@ def walk_forward(matches: pd.DataFrame, test_seasons: list | None = None, quiet:
                 continue
             for _, m in wk.iterrows():
                 dist = model.distributions(ratings, m["home"], m["away"])
+                # profilo della partita prima del calcio d'inizio: serve a trovare le "partite simili"
+                prof = {"league": league, "date": str(m["date"].date()), "home": m["home"], "away": m["away"]}
+                for s, k in (("goals", "eg"), ("sot", "es"), ("corners", "ec"), ("cards", "ek")):
+                    if s in dist:
+                        prof[k + "_h"], prof[k + "_a"] = round(dist[s]["exp_h"], 3), round(dist[s]["exp_a"], 3)
+                profiles.append(prof)
                 for mdef in mk.MARKETS:
                     p = mk.probability(mdef, dist)
                     y = mk.outcome(mdef, m)
@@ -42,7 +48,9 @@ def walk_forward(matches: pd.DataFrame, test_seasons: list | None = None, quiet:
                     rows.append(row)
         if not quiet:
             print(f"  backtest {config.LEAGUES[league]} completato")
-    return pd.DataFrame(rows)
+    out = pd.DataFrame(rows)
+    out.attrs["profiles"] = profiles
+    return out
 
 
 def _baseline(bt: pd.DataFrame) -> pd.Series:
@@ -130,25 +138,27 @@ def value_backtest(bt: pd.DataFrame, min_edge=config.MIN_EDGE) -> list[dict]:
     return results
 
 
-def isotonic_maps(bt: pd.DataFrame, min_n=500) -> dict:
-    """Mappa di calibrazione per mercato (isotonic regression, algoritmo PAV)."""
+def isotonic_maps(bt: pd.DataFrame, min_n=500, k=30.0) -> dict:
+    """Mappa di calibrazione per mercato (isotonic regression, algoritmo PAV).
+    I blocchi con poche previsioni (di solito agli estremi) vengono avvicinati alla diagonale:
+    senza questa zavorra una sola giocata vinta al 63% poteva far diventare "100%" tutta la coda."""
     maps = {}
     for key, g in bt.groupby("market"):
         if len(g) < min_n:
             continue
         order = np.argsort(g["prob"].to_numpy())
         x, y = g["prob"].to_numpy()[order], g["won"].to_numpy()[order]
-        blocks = [[yi, 1.0, xi, xi] for xi, yi in zip(x, y)]  # somma y, peso, x min, x max
-        merged = []
-        for blk in blocks:
-            merged.append(blk)
+        merged = []  # somma y, peso, somma x
+        for xi, yi in zip(x, y):
+            merged.append([yi, 1.0, xi])
             while len(merged) > 1 and merged[-2][0] / merged[-2][1] >= merged[-1][0] / merged[-1][1]:
                 b2 = merged.pop()
                 b1 = merged.pop()
-                merged.append([b1[0] + b2[0], b1[1] + b2[1], b1[2], b2[3]])
-        xs = [(b[2] + b[3]) / 2 for b in merged]
-        ys = [b[0] / b[1] for b in merged]
-        maps[key] = {"x": xs, "y": ys}
+                merged.append([b1[0] + b2[0], b1[1] + b2[1], b1[2] + b2[2]])
+        xs = [b[2] / b[1] for b in merged]
+        ys = [(b[0] + k * b[2] / b[1]) / (b[1] + k) for b in merged]
+        ys = list(np.maximum.accumulate(ys))  # resta crescente
+        maps[key] = {"x": [round(v, 5) for v in xs], "y": [round(v, 5) for v in ys]}
     return maps
 
 
@@ -160,6 +170,7 @@ def calibrate(p: float, cmap: dict | None) -> float:
 
 def run(matches: pd.DataFrame) -> dict:
     bt = walk_forward(matches)
+    pd.DataFrame(bt.attrs.get("profiles", [])).to_csv(config.DATA_DIR / "profili.csv", index=False)
     bt.to_csv(config.DATA_DIR / "backtest_predictions.csv", index=False)
     metrics = market_metrics(bt)
     summary = {
@@ -169,6 +180,7 @@ def run(matches: pd.DataFrame) -> dict:
         "calibration": calibration_curves(bt),
         "value": value_backtest(bt),
         "iso": isotonic_maps(bt),
+        "mv": mk.MARKETS_VERSION,
     }
     (config.DATA_DIR / "backtest.json").write_text(json.dumps(summary, default=float))
     return summary

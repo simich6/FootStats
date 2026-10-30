@@ -128,7 +128,7 @@ def save(history: list[dict]) -> None:
 def recent_results(matches: pd.DataFrame, days: int = 45) -> list[dict]:
     """Risultati recenti per chiudere in automatico le giocate del diario."""
     cut = pd.Timestamp.today() - pd.Timedelta(days=days)
-    cols = [f"{s}_{st}" for st in ("goals", "shots", "sot", "corners", "fouls", "cards") for s in ("h", "a")]
+    cols = [f"{s}_{st}" for st in ("goals", "shots", "sot", "corners", "fouls", "cards", "ht", "sh") for s in ("h", "a")]
     out = []
     for _, m in matches[matches["date"] >= cut].iterrows():
         r = {"date": str(m["date"].date()), "home": m["home"], "away": m["away"]}

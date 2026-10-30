@@ -8,6 +8,7 @@ import markets as mk
 import model
 import quote as qt
 import rivalita
+import simili
 
 
 def _confidence(market_row: dict | None, n_home: int, n_away: int) -> float:
@@ -88,6 +89,7 @@ def predict_fixtures(matches: pd.DataFrame, fixtures: pd.DataFrame, bt: dict | N
     today = pd.Timestamp.today().normalize()
     fixtures = fixtures[fixtures["date"] >= today]
     dfac = rivalita.derby_factors(matches)
+    prof = simili.load()
     for league, fx in fixtures.groupby("league"):
         hist = matches[matches["league"] == league]
         ratings = model.fit_all(hist, today + pd.Timedelta(days=1))
@@ -96,6 +98,7 @@ def predict_fixtures(matches: pd.DataFrame, fixtures: pd.DataFrame, bt: dict | N
         recent = hist[hist["date"] >= today - pd.Timedelta(days=365)]
         counts = pd.concat([recent["home"], recent["away"]]).value_counts()
         base = base_rates(hist, today)
+        sim_prep = simili.prepare(prof, hist, league)
         for _, f in fx.iterrows():
             dist = model.distributions(ratings, f["home"], f["away"])
             nh, na = int(counts.get(f["home"], 0)), int(counts.get(f["away"], 0))
@@ -139,6 +142,7 @@ def predict_fixtures(matches: pd.DataFrame, fixtures: pd.DataFrame, bt: dict | N
                 "scores": _scores(dist.get("goals")),
                 "picks": picks,
                 "h2h": h2h,
+                "similar": simili.similar(sim_prep, {s: [d["exp_h"], d["exp_a"]] for s, d in dist.items()}),
                 "rivalry": {"name": der, "cards": dfac["cards"]["factor"], "fouls": dfac["fouls"]["factor"],
                             "n": dfac["cards"]["n"]} if der else None,
                 "climate": climate(dist.get("cards"), ratings.get("cards"), picks, h2h, dfac["cards"]["factor"] if der else 1.0),

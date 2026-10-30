@@ -141,6 +141,10 @@ def update(fixtures: pd.DataFrame, matches: pd.DataFrame) -> dict:
     if fixtures is None or fixtures.empty:
         return st.get("out", {"players": {}, "injuries": {}})
     cl, season = Client(key, st), _season()
+    bl = st.get("blocked")
+    if bl and bl.get("season") == season and (date.today() - date.fromisoformat(bl["day"])).days < 7:
+        print("  giocatori: il piano gratuito non copre la stagione in corso (riprovo una volta a settimana)")
+        return {"players": {}, "injuries": {}}
     today = pd.Timestamp.today().normalize()
     soon = fixtures[(fixtures["date"] >= today) & (fixtures["date"] <= today + pd.Timedelta(days=AHEAD_DAYS))].sort_values("date")
     players = st.setdefault("players", {})
@@ -167,6 +171,7 @@ def update(fixtures: pd.DataFrame, matches: pd.DataFrame) -> dict:
         print(f"  giocatori: mi fermo qui ({e})")
         if "plan" in str(e).lower() or "season" in str(e).lower():
             print("  ! giocatori: il piano gratuito di API-Football non sembra coprire la stagione in corso")
+            st["blocked"] = {"season": season, "day": str(date.today())}
     except requests.RequestException as e:
         print(f"  ! giocatori: servizio non raggiungibile ({e})")
     inj = st.get("injuries", {})

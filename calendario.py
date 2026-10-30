@@ -38,6 +38,7 @@ ALIASES = {
     "borussia dortmund": "Dortmund", "bayer leverkusen": "Leverkusen", "leverkusen": "Leverkusen",
     "brighton hove albion": "Brighton", "newcastle united": "Newcastle", "west ham united": "West Ham",
     "leeds united": "Leeds", "paris": "Paris FC", "paris fc": "Paris FC",
+    "deportivo la coruna": "La Coruna", "deportivo": "La Coruna", "la coruna": "La Coruna",
 }
 DROP = {"fc", "cf", "ac", "afc", "ssc", "as", "us", "sc", "calcio", "club", "de", "sv", "vfl", "vfb", "tsg",
         "rcd", "ud", "cd", "sd", "ca", "sl", "olympique", "stade", "rc", "ogc", "losc", "acf", "bc", "fk",
