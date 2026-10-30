@@ -275,9 +275,9 @@ const charts={};
 function chart(key,canvas,cfg){charts[key]?.destroy();if(!window.Chart||!canvas)return;
   Chart.defaults.color=css("--muted");Chart.defaults.borderColor=css("--line");Chart.defaults.font.family='"Source Sans 3",system-ui,sans-serif';
   charts[key]=new Chart(canvas,cfg)}
-const STAT={goals:"Gol",corners:"Corner",cards:"Cartellini",sot:"Tiri in porta",shots:"Tiri",fouls:"Falli"};
-const LINES={goals:[1.5,2.5,3.5],corners:[7.5,8.5,9.5,10.5,11.5],cards:[2.5,3.5,4.5,5.5],sot:[6.5,7.5,8.5,9.5],shots:[20.5,22.5,24.5,26.5],fouls:[20.5,22.5,24.5,26.5]};
-const DEFLINE={goals:2.5,corners:9.5,cards:4.5,sot:8.5,shots:24.5,fouls:22.5};
+const STAT={goals:"Gol",corners:"Corner",cards:"Cartellini",sot:"Tiri in porta",shots:"Tiri",fouls:"Falli",ht:"Gol 1° tempo",sh:"Gol 2° tempo"};
+const LINES={goals:[1.5,2.5,3.5],corners:[7.5,8.5,9.5,10.5,11.5],cards:[2.5,3.5,4.5,5.5],sot:[6.5,7.5,8.5,9.5],shots:[20.5,22.5,24.5,26.5],fouls:[20.5,22.5,24.5,26.5],ht:[0.5,1.5,2.5],sh:[0.5,1.5,2.5]};
+const DEFLINE={goals:2.5,corners:9.5,cards:4.5,sot:8.5,shots:24.5,fouls:22.5,ht:1.5,sh:1.5};
 
 const setUpdated=()=>$("updated").textContent=`Aggiornato il ${DATA.generated} · ${DATA.fixtures.length} partite ancora da giocare`;
 setUpdated();
@@ -304,7 +304,7 @@ lgLabel();$("fLeague").addEventListener("click",leagueSheet);
 
 function filters(){return{group:$("fGroup").value,prob:+$("fProb").value/100,max:+$("fMax").value/100,conf:+$("fConf").value,green:$("fGreen").checked}}
 function passes(p,F){return avail(p)&&(!F.group||p.group===F.group)&&p.prob>=F.prob&&p.prob<=F.max&&p.confidence>=F.conf&&(!F.green||p.reliability==="green")}
-function chipLabel(p){if(p.group==="Multipla")return p.label;if(p.group==="Esito finale")return"Esito "+p.label;if(p.group==="Gol")return/^(Over|Under|Casa|Ospite)/.test(p.label)?p.label+" gol":p.label;return p.label+" "+p.group.toLowerCase()}
+function chipLabel(p){if(p.group==="Multipla"||p.group==="Primo tempo"||p.group==="Secondo tempo")return p.label;if(p.group==="Esito finale")return"Esito "+p.label;if(p.group==="Gol")return/^(Over|Under|Casa|Ospite)/.test(p.label)?p.label+" gol":p.label;return p.label+" "+p.group.toLowerCase()}
 const games=t=>DATA.trends[t]?.games||[];
 const miniForm=t=>`<span class="mini-form">${games(t).slice(-5).map(g=>`<i class="${g.res}" title="${g.res}"></i>`).join("")}</span>`;
 function oneX2(f){const g=k=>f.picks.find(p=>p.key===k)?.prob??0;return[g("1"),g("X"),g("2")]}
@@ -313,14 +313,16 @@ function oneX2(f){const g=k=>f.picks.find(p=>p.key===k)?.prob??0;return[g("1"),g
 const MKEY="footstats-mercati";
 const FAMILIES=[["1X2","Esito 1X2"],["DC","Doppia chance"],["GGNG","Goal / No Goal"],["OUG","Under/Over gol"],["MG","Multigol"],["MGS","Multigol squadra"],["GS","Under/Over gol squadra"],
  ["CT","Corner totali"],["CS","Corner squadra"],["KT","Cartellini totali"],["KS","Cartellini squadra"],["FT","Falli totali"],["FS","Falli squadra"],
- ["ST","Tiri totali"],["SS","Tiri squadra"],["OT","Tiri in porta totali"],["OS","Tiri in porta squadra"]];
-const PRESET_COMMON=["1X2","DC","GGNG","OUG","MG","GS","CT","CS","KT"];
-function family(key){const d=DATA.mdefs?.[key];if(!d)return null;
+ ["ST","Tiri totali"],["SS","Tiri squadra"],["OT","Tiri in porta totali"],["OS","Tiri in porta squadra"],["HT","Primo e secondo tempo"]];
+const PRESET_COMMON=["1X2","DC","GGNG","OUG","MG","GS","CT","CS","KT","HT"];
+function family(key){const d=DATA.mdefs?.[key];if(!d)return null;if(d.stat==="ht"||d.stat==="sh")return"HT";
   if(d.kind==="result")return["1","X","2"].includes(key)?"1X2":"DC";if(d.kind==="btts")return"GGNG";
   if(d.kind==="range")return"MG";if(d.kind.endsWith("_range"))return"MGS";
   const team=!d.kind.startsWith("total"),S={goals:["OUG","GS"],corners:["CT","CS"],cards:["KT","KS"],fouls:["FT","FS"],shots:["ST","SS"],sot:["OT","OS"]}[d.stat];
   return S?S[team?1:0]:null}
-function loadMk(){try{const v=JSON.parse(localStorage.getItem(MKEY));return new Set(v||PRESET_COMMON)}catch(e){return new Set(PRESET_COMMON)}}
+function loadMk(){try{const v=JSON.parse(localStorage.getItem(MKEY));const m=new Set(v||PRESET_COMMON);
+  // mercati nuovi (primo tempo): attivi anche per chi aveva già salvato le sue scelte
+  if(v&&!localStorage.getItem("footstats-mk-ht")){m.add("HT");localStorage.setItem("footstats-mk-ht","1");localStorage.setItem(MKEY,JSON.stringify([...m]))}return m}catch(e){return new Set(PRESET_COMMON)}}
 let MK=loadMk();
 const LKEY="footstats-linee";
 let MAINONLY=(()=>{try{return localStorage.getItem(LKEY)!=="all"}catch(e){return true}})();
@@ -487,7 +489,7 @@ function renderFind(){
      ||'<p class="empty">Nessuna partita supera la soglia: abbassa la percentuale minima o cambia linea.</p>'}
    <p class="note">Per ogni partita in programma calcola la probabilità della giocata scelta. Il confronto con la media del campionato ti dice se è una partita "da quella giocata" o semplicemente nella norma.</p>`;
   el.querySelectorAll("[data-gs]").forEach(b=>b.addEventListener("click",()=>{const k=b.dataset.gs,v=b.dataset.v;GS[k]=["min","days"].includes(k)?+v:v;
-    if(k==="stat"||k==="scope"){const dl={goals:2.5,corners:9.5,cards:4.5,fouls:22.5,shots:24.5,sot:8.5}[GS.stat];GS.line=GS.scope==="total"?dl:Math.max(0.5,Math.floor(dl/2)+0.5);GS.lo=Math.max(0,Math.floor(dl)-1);GS.hi=Math.floor(dl)+1}
+    if(k==="stat"||k==="scope"){const dl={goals:2.5,corners:9.5,cards:4.5,fouls:22.5,shots:24.5,sot:8.5,ht:1.5,sh:1.5}[GS.stat];GS.line=GS.scope==="total"?dl:Math.max(0.5,Math.floor(dl/2)+0.5);GS.lo=Math.max(0,Math.floor(dl)-1);GS.hi=Math.floor(dl)+1}
     renderFind()}));
   el.querySelectorAll("[data-gst]").forEach(b=>b.addEventListener("click",()=>{const k=b.dataset.gst;GS[k]=Math.max(k==="line"?0.5:0,+GS[k]+ +b.dataset.d);renderFind()}));
   const byId=id=>rows.find(r=>fid(r.f)===id);
@@ -536,7 +538,7 @@ const TOP={n:5,days:7,band:"40-75",mine:false,open:{},sort:"lift"};
 const lift=p=>p.base==null?0:p.prob-p.base;
 const score=p=>TOP.sort==="lift"?lift(p):p.prob;
 const bandRange=()=>TOP.band.split("-").map(x=>+x/100);
-const STATKEY={"Gol":"goals","Calci d'angolo":"corners","Cartellini":"cards","Falli":"fouls","Tiri totali":"shots","Tiri in porta":"sot"};
+const STATKEY={"Gol":"goals","Calci d'angolo":"corners","Cartellini":"cards","Falli":"fouls","Tiri totali":"shots","Tiri in porta":"sot","Primo tempo":"ht","Secondo tempo":"sh"};
 function why(f,p){
   const st=STATKEY[p.group]||"goals",e=f.expected[st];if(!e)return"";
   const m=p.label.match(/(\d+\.5)/),line=m?+m[1]:null;
@@ -861,6 +863,7 @@ function cassaPanel(){const c=loadCassa()||{bank:"",pct:1.5,limit:""},st=cassaSt
    <button class="btn" id="kSave" style="align-self:end">Salva</button></div>
    <p class="note">Consigliato 1-2% per giocata. Sopra il 3% una normale serie negativa può svuotare la cassa.</p></div>`}
 function outcomeJS(d,r){const h=r["h_"+d.stat],a=r["a_"+d.stat];if(h==null||a==null)return null;
+  if(d.kind==="half_more"){if(r.h_goals==null||r.a_goals==null)return null;const t1=h+a,t2=r.h_goals+r.a_goals-t1;return d.args[0]==="1"?t1>t2:d.args[0]==="2"?t2>t1:t1===t2}
   if(d.kind==="result"){const res=h>a?"H":h===a?"D":"A";return d.args[0].includes(res)}
   if(d.kind==="btts")return(h>0&&a>0)===d.args[0];
   if(d.kind.endsWith("range")){const v=d.kind==="range"?h+a:d.kind==="home_range"?h:a;return d.args[0]<=v&&v<=d.args[1]}
@@ -975,7 +978,8 @@ function anReliability(def){const ms=DATA.backtest?.metrics||[];let m=def.key&&m
   if(!sim.length)return{grade:"red",txt:"Linea non verificata nel backtest: stima del modello senza controllo storico"};
   const sk=sim.reduce((a,x)=>a+x.skill,0)/sim.length;return{grade:sk>0.03?"green":sk>0?"yellow":"red",txt:"Linea non verificata direttamente: affidabilità stimata da linee simili"}}
 function anFromPick(f,p){const d=DATA.mdefs[p.key];AN.league=f.league;AN.home=f.home;AN.away=f.away;AN.date=f.date;AN.stat=d.stat;
-  if(d.kind==="result"||d.kind==="btts"){AN.type="esito";AN.esito=p.key;AN.scope="total"}
+  if(d.stat!=="goals"&&["result","btts","half_more"].includes(d.kind)){AN.stat=d.stat;AN.type="over";AN.scope="total";AN.line=0.5}
+  else if(d.kind==="result"||d.kind==="btts"){AN.type="esito";AN.esito=p.key;AN.scope="total"}
   else if(d.kind.endsWith("range")){AN.type="range";AN.scope=d.kind==="range"?"total":d.kind.split("_")[0];AN.lo=d.args[0];AN.hi=d.args[1]}
   else{const[sc,ty]=d.kind.split("_");AN.scope=sc;AN.type=ty;AN.line=d.args[0]}
   showTab("analyze")}
@@ -1016,8 +1020,8 @@ function renderAnalyze(){
      <div class="row"><button class="btn" id="anPlay">+ La gioco</button><button class="btn ghost" id="anAddM">+ Multipla</button></div></div>`:'<p class="empty">Nessun dato per questa combinazione.</p>'}`;
   const re=()=>renderAnalyze();
   el.querySelectorAll("[data-an]").forEach(b=>b.addEventListener("click",()=>{AN[b.dataset.an]=b.dataset.v;
-    if(b.dataset.an==="stat"){const dl={goals:2.5,corners:9.5,cards:4.5,fouls:22.5,shots:24.5,sot:8.5}[AN.stat];AN.line=AN.scope==="total"?dl:Math.max(0.5,Math.floor(dl/2)+0.5);AN.lo=Math.max(0,Math.floor(dl)-1);AN.hi=Math.floor(dl)+1}
-    if(b.dataset.an==="scope"&&AN.type!=="esito"){const dl={goals:2.5,corners:9.5,cards:4.5,fouls:22.5,shots:24.5,sot:8.5}[AN.stat];AN.line=AN.scope==="total"?dl:Math.max(0.5,Math.floor(dl/2)+0.5)}
+    if(b.dataset.an==="stat"){const dl={goals:2.5,corners:9.5,cards:4.5,fouls:22.5,shots:24.5,sot:8.5,ht:1.5,sh:1.5}[AN.stat];AN.line=AN.scope==="total"?dl:Math.max(0.5,Math.floor(dl/2)+0.5);AN.lo=Math.max(0,Math.floor(dl)-1);AN.hi=Math.floor(dl)+1}
+    if(b.dataset.an==="scope"&&AN.type!=="esito"){const dl={goals:2.5,corners:9.5,cards:4.5,fouls:22.5,shots:24.5,sot:8.5,ht:1.5,sh:1.5}[AN.stat];AN.line=AN.scope==="total"?dl:Math.max(0.5,Math.floor(dl/2)+0.5)}
     AN.odds=null;re()}));
   el.querySelectorAll("[data-st]").forEach(b=>b.addEventListener("click",()=>{const k=b.dataset.st;AN[k]=Math.max(k==="line"?0.5:0,+AN[k]+ +b.dataset.d);AN.odds=null;re()}));
   el.querySelectorAll("[data-line]").forEach(b=>b.addEventListener("click",()=>{AN.line=+b.dataset.line;AN.odds=null;re()}));
@@ -1366,7 +1370,7 @@ function renderHome(){
 
 /* ---------- PARTITA ---------- */
 const PT={league:null,fid:null,ms:"sot",open:{},pteam:0,pavg:""};
-const FKEY="footstats-preferiti",FAV_DEFAULT=["OT","OS","MG","MGS","1X2","DC","GGNG"];
+const FKEY="footstats-preferiti",FAV_DEFAULT=["OT","OS","MG","MGS","1X2","DC","GGNG","HT"];
 let FAV=(()=>{try{return new Set(JSON.parse(localStorage.getItem(FKEY))||FAV_DEFAULT)}catch(e){return new Set(FAV_DEFAULT)}})();
 const rt=(lg,s)=>DATA.ratings?.[lg]?.[s];
 function teamIdx(lg,s,team,home){const r=rt(lg,s);if(!r)return null;const a=r.att[team]??r.prior[0],d=r.dfn[team]??r.prior[1];
@@ -1475,6 +1479,23 @@ function h2hHtml(f){const h=f.h2h;if(!h||!h.n)return'<p class="note">Nessuno sco
    <tr><th>Media</th><th style="text-align:left">Goal in ${Math.round((h.avg.btts||0)*h.n)}/${h.n}</th><th>${h.avg.goals?.toFixed(1)??"–"}</th><th>${h.avg.sot?.toFixed(1)??"–"}</th><th>${h.avg.corners?.toFixed(1)??"–"}</th><th>${h.avg.fouls?.toFixed(1)??"–"}</th><th>${h.avg.cards?.toFixed(1)??"–"}</th></tr>
    <tr><td class="note">Media campionato</td><td></td><td class="note">${L.goals??"–"}</td><td class="note">${L.sot??"–"}</td><td class="note">${L.corners??"–"}</td><td class="note">${L.fouls??"–"}</td><td class="note">${L.cards??"–"}</td></tr></table></div>
    <p class="note">Gli scontri diretti sono poche partite, spesso con allenatori e giocatori diversi: guardali come contesto, non come regola.</p>`}
+function simHtml(f,best){const S=f.similar;
+  if(!S||!S.n)return'<p class="note">Il confronto compare dopo il prossimo aggiornamento completo (serve il backtest con i profili delle partite).</p>';
+  const keys=[],add=p=>{if(p&&S.freq[p.key]!=null&&!keys.includes(p.key))keys.push(p.key)};
+  best.forEach(add);
+  FAMILIES.filter(([k])=>FAV.has(k)).forEach(([k])=>add(f.picks.filter(p=>family(p.key)===k&&p.prob>=.3&&p.prob<=.9).sort((a,b)=>hscore(b)-hscore(a))[0]));
+  ["1","GG","goals_total_o2.5"].forEach(k=>add(f.picks.find(p=>p.key===k)));
+  const rows=keys.slice(0,10).map(k=>{const p=f.picks.find(x=>x.key===k),y=S.freq[k],d=y-p.prob;
+    const[ic,t]=Math.abs(d)<=.08?["✓","concordano"]:d>0?["👍","nelle partite simili è uscita ancora di più"]:["⚠","nelle partite simili è uscita meno: prudenza"];
+    return`<div class="rk-row"><div class="rk-t"><b>${chipLabel(p)}</b><span class="note">${ic} ${t}</span></div>
+      <div class="rk-bar"><span class="fill ${d<-.08?"bad":"good"}" style="width:${y*100}%"></span><span class="mark" style="left:${p.prob*100}%"></span></div>
+      <div class="rk-v"><b>${pct(y)}</b><span class="note">modello ${pct(p.prob)}</span></div></div>`}).join("");
+  const A=S.avg,E=f.expected,tile=(s,l)=>A[s]!=null&&E[s]?`<div class="kpi"><div class="k">${l}</div><div class="v">${A[s].toFixed(1)}</div><div class="d">modello oggi ${(E[s][0]+E[s][1]).toFixed(1)}</div></div>`:"";
+  return`<p class="note" style="margin-top:0">Le <b>${S.n} partite</b> di questo campionato che, prima di giocarsi, avevano il profilo più simile a questa (gol e tiri in porta attesi per le due squadre). Periodo ${S.from.slice(5,7)}/${S.from.slice(2,4)} – ${S.to.slice(5,7)}/${S.to.slice(2,4)}. Cosa è successo davvero:</p>
+   <div class="kpis">${tile("goals","Gol a partita")}${tile("ht","Gol nel 1° tempo")}${tile("sot","Tiri in porta")}${tile("corners","Corner")}${tile("cards","Cartellini")}</div>
+   <div class="panel" style="margin-top:8px">${rows||'<p class="note">Nessuna giocata da confrontare.</p>'}
+   <p class="note" style="margin-bottom:0">Barra = quante volte è uscita nelle partite simili, tacca nera = percentuale del modello per questa partita. Con ${S.n} partite differenze fino a 8–10 punti sono normali; oltre, meglio approfondire.</p></div>
+   <details class="sgrid"><summary class="note">Alcune delle partite simili</summary><p class="note">${S.ex.map(esc).join(" · ")}</p></details>`}
 function renderMatch(){
   const el=$("match"),lgs=leaguesWithFx();
   if(!lgs.length){el.innerHTML='<p class="empty">Nessuna partita in calendario.</p>';return}
@@ -1493,6 +1514,7 @@ function renderMatch(){
    <h2>Le migliori per questa partita</h2>
    ${best.length?best.map((p,i)=>`<div class="tp" style="border-top:${i?"1px solid var(--line)":"0"}">${ring(p.prob,i===0)}<div><div class="tp-l">${chipLabel(p)} ${gradeBadge(f,p)}</div>${liftHtml(p)}<div class="tp-w">${why(f,p)}</div>${oddsLine(p)}${pickBtns(f,p,false)}</div></div>`).join("")
      :'<p class="note">Nessuna giocata si discosta abbastanza dalla media del campionato: partita "normale". Guarda i tuoi mercati qui sotto.</p>'}
+   <h2 style="margin-top:20px">Partite simili</h2>${simHtml(f,best)}
    <h2 style="margin-top:20px">Attacco contro difesa</h2>
    <div class="row toolbar"><span class="seg" role="group">${MS.map(([s,l])=>`<button aria-pressed="${PT.ms===s}" data-ms="${s}">${l}</button>`).join("")}</span></div>
    ${matchupHtml(f,PT.ms)}
