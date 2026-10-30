@@ -179,10 +179,30 @@ details.sgrid summary{cursor:pointer;margin:6px 0}
 .btn.small{padding:2px 8px;font-size:.82rem}
 tr.pick{cursor:pointer}
 #best td:nth-child(2),#best th:nth-child(2),#history td:nth-child(2),#history th:nth-child(2),#diary td:nth-child(2),#diary th:nth-child(2){text-align:left}
+.grade{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:7px;border:0;font:700 1rem "Barlow Condensed",sans-serif;color:#fff;cursor:pointer;vertical-align:middle;padding:0}
+.grade.gA{background:#2E8B57}.grade.gB{background:#7FA33A}.grade.gC{background:#C9A227;color:#1D2A24}.grade.gD{background:#B8483E}
+.gbar span{background:var(--turf)!important}.gbar::after{display:none}
+details.hd{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin:10px 0}details.hd>summary{cursor:pointer;font-weight:600;padding:4px 0}
+details.hd[open]>summary{margin-bottom:10px}
+.formc.up{border-color:var(--good);color:var(--ink)}.formc.down{border-color:var(--bad);color:var(--ink)}
+.rk-row{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1.6fr) auto;gap:4px 10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
+.rk-row.tap{cursor:pointer}.rk-t{display:flex;flex-direction:column;line-height:1.2}.rk-t .note{font-size:.78rem}
+.rk-bar{position:relative;height:12px;background:var(--bg);border-radius:6px}.rk-bar .fill{position:absolute;left:0;top:0;height:100%;border-radius:6px}
+.rk-bar .fill.good{background:var(--good)}.rk-bar .fill.mid{background:var(--mid)}.rk-bar .fill.bad{background:var(--bad)}
+.rk-bar .mark{position:absolute;top:-4px;width:3px;height:20px;background:var(--ink);border-radius:2px;transform:translateX(-1px)}
+.rk-v{display:flex;flex-direction:column;align-items:flex-end;font:600 .95rem "Barlow Condensed",sans-serif;line-height:1.1}.rk-v b{font-size:1.15rem}
+.rk-list{background:var(--bg);border-radius:8px;padding:6px 10px;margin:4px 0 8px}
+.rk-li{display:grid;grid-template-columns:1.2em 3.2em minmax(0,1fr) auto;gap:8px;font-size:.85rem;padding:3px 0}.rk-m{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;max-width:360px}
+.cd{display:grid;place-items:center;aspect-ratio:1;border-radius:5px;font:600 .78rem "Barlow Condensed",sans-serif;color:#fff}
+.cd.e{background:var(--bg);border:1px solid var(--line)}.cd.g2{background:var(--good)}.cd.g1{background:#7FA33A}.cd.r1{background:var(--mid);color:#1D2A24}.cd.r2{background:var(--bad)}
+.cdh{text-align:center;font-size:.75rem;color:var(--muted)}.cd.lg{display:inline-block;width:12px;height:12px;vertical-align:middle;aspect-ratio:auto}
+@media (max-width:560px){.rk-row{grid-template-columns:minmax(0,1fr) auto}.rk-bar{grid-column:1/3;grid-row:2}}
 .picker{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:10px;margin-bottom:12px}
 .picker select{width:100%;font-size:1.02rem;padding:9px 10px}
 @media (max-width:560px){.picker{grid-template-columns:1fr}}
 .mhero{padding:14px}
+.askp{border:2px solid var(--turf)}.askp textarea{width:100%;font:inherit;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);margin-top:10px;resize:vertical}
 .tag{display:inline-block;padding:0 7px;border-radius:9px;font:600 .78rem/1.5 "Source Sans 3",sans-serif;white-space:nowrap}
 .tag.hi{background:var(--turf);color:#fff}.tag.lo{background:var(--away-soft);color:var(--ink)}.tag.mid{background:var(--bg);color:var(--ink);border:1px solid var(--line)}.tag.hot{background:var(--bad);color:#fff}
 .bigm.hot{background:var(--bad);color:#fff}
@@ -216,21 +236,8 @@ nav .morebtn[aria-expanded=true]{color:var(--ink)}
 <nav role="tablist" id="nav1">
   <button role="tab" aria-selected="true" data-tab="home">Home</button>
   <button role="tab" aria-selected="false" data-tab="match">Partita</button>
-  <button role="tab" aria-selected="false" data-tab="multi">Multiple</button>
-  <button role="tab" aria-selected="false" data-tab="find">Cerca giocata</button>
-  <button role="tab" aria-selected="false" data-tab="history">Storico</button>
+  <button role="tab" aria-selected="false" data-tab="trend">Andamento</button>
   <button role="tab" aria-selected="false" data-tab="diary">Il mio diario</button>
-  <button class="morebtn" id="moreBtn" aria-expanded="false" aria-controls="nav2">Altro ▾</button>
-</nav>
-<nav role="tablist" id="nav2" hidden aria-label="Altre sezioni">
-  <button role="tab" aria-selected="false" data-tab="top">Top della settimana</button>
-  <button role="tab" aria-selected="false" data-tab="value">Valore</button>
-  <button role="tab" aria-selected="false" data-tab="analyze">Analizza</button>
-  <button role="tab" aria-selected="false" data-tab="matches">Tutte le partite</button>
-  <button role="tab" aria-selected="false" data-tab="teams">Squadre</button>
-  <button role="tab" aria-selected="false" data-tab="leagues">Campionati</button>
-  <button role="tab" aria-selected="false" data-tab="best">Migliori giocate</button>
-  <button role="tab" aria-selected="false" data-tab="reliability">Affidabilità</button>
 </nav>
 <main>
   <div class="filters" id="filters">
@@ -243,18 +250,9 @@ nav .morebtn[aria-expanded=true]{color:var(--ink)}
   </div>
   <section id="home"></section>
   <section id="match" hidden></section>
-  <section id="top" hidden></section>
-  <section id="find" hidden></section>
-  <section id="multi" hidden></section>
-  <section id="value" hidden></section>
-  <section id="analyze" hidden></section>
-  <section id="matches" hidden></section>
-  <section id="teams" hidden></section>
-  <section id="leagues" hidden></section>
-  <section id="best" hidden></section>
-  <section id="reliability" hidden></section>
-  <section id="history" hidden></section>
+  <section id="trend" hidden></section>
   <section id="diary" hidden></section>
+  <section id="analyze" hidden></section>
 </main>
 <footer>
   Le percentuali sono stime statistiche, non certezze: anche una giocata al 75% perde una volta su quattro.
@@ -341,7 +339,7 @@ function marketSheet(){
     <p class="note">L'app proporrà solo questi. Controlla su Bet365 quali mercati compaiono per le partite che segui e togli gli altri: cambiano da partita a partita.</p>
     <div class="row" style="margin-bottom:8px"><button class="btn small ghost" data-p="common">Più comuni</button><button class="btn small ghost" data-p="all">Tutti</button></div>
     <div class="mkgrid">${FAMILIES.map(([k,l])=>`<label class="mk"><input type="checkbox" value="${k}" ${MK.has(k)?"checked":""}> ${l}</label>`).join("")}</div>
-    <label class="mk" style="margin-top:12px;border-top:1px solid var(--line);padding-top:10px"><input type="checkbox" id="mMain" ${MAINONLY?"checked":""}> <span><b>Solo linee principali</b><br><span class="note">Per corner, cartellini, falli e tiri propone solo la linea che il bookmaker mette di solito, quella vicina al valore atteso (es. 4.5 cartellini). Le altre restano in Analizza.</span></span></label>
+    <label class="mk" style="margin-top:12px;border-top:1px solid var(--line);padding-top:10px"><input type="checkbox" id="mMain" ${MAINONLY?"checked":""}> <span><b>Solo linee principali</b><br><span class="note">Per corner, cartellini, falli e tiri propone solo la linea che il bookmaker mette di solito, quella vicina al valore atteso (es. 4.5 cartellini). Le altre restano nella scheda Partita.</span></span></label>
     <div class="row" style="margin-top:12px"><button class="btn mSave">Salva</button><button class="btn ghost mX">Annulla</button></div></div>`;
     sh.querySelectorAll("[data-p]").forEach(b=>b.addEventListener("click",()=>{const set=b.dataset.p==="all"?FAMILIES.map(f=>f[0]):PRESET_COMMON;
       sh.querySelectorAll(".mkgrid .mk input").forEach(i=>i.checked=set.includes(i.value))}));
@@ -719,7 +717,7 @@ function matchDetail(f,i){
   <p class="note">Tocca una giocata per inserire la quota del tuo bookmaker e salvarla nel diario.</p>`;
   const q=c=>d.querySelector(c);
   q(".askAI")?.addEventListener("click",()=>askSheet(f));
-  q(".anOpen")?.addEventListener("click",()=>{AN.league=f.league;AN.home=f.home;AN.away=f.away;AN.date=f.date;document.querySelector('nav button[data-tab="analyze"]').click()});
+  q(".anOpen")?.addEventListener("click",()=>{AN.league=f.league;AN.home=f.home;AN.away=f.away;AN.date=f.date;showTab("analyze")});
   const reopen=()=>{applyReferees();const nd=matchDetail(f,i);d.replaceWith(nd)};
   q(".rApply")?.addEventListener("click",()=>{const r=loadRefs(),c=+q(".rC").value,fo=+q(".rF").value,n=+q(".rN").value;
     if(!(c>0)&&!(fo>0)){alert("Inserisci almeno la media cartellini o falli dell'arbitro");return}
@@ -980,7 +978,7 @@ function anFromPick(f,p){const d=DATA.mdefs[p.key];AN.league=f.league;AN.home=f.
   if(d.kind==="result"||d.kind==="btts"){AN.type="esito";AN.esito=p.key;AN.scope="total"}
   else if(d.kind.endsWith("range")){AN.type="range";AN.scope=d.kind==="range"?"total":d.kind.split("_")[0];AN.lo=d.args[0];AN.hi=d.args[1]}
   else{const[sc,ty]=d.kind.split("_");AN.scope=sc;AN.type=ty;AN.line=d.args[0]}
-  document.querySelector('nav button[data-tab="analyze"]').click()}
+  showTab("analyze")}
 function renderAnalyze(){
   const el=$("analyze"),lgs=Object.keys(DATA.ratings||{});
   if(!lgs.length){el.innerHTML='<p class="empty">Dati del modello non disponibili: aggiorna l\'app con l\'ultima versione.</p>';return}
@@ -1217,7 +1215,7 @@ function renderDiary(){
       <div class="note">${b.odds?"quota "+b.odds.toFixed(2):"senza quota"}${b.close>1&&b.odds?` · chiusura ${b.close.toFixed(2)} <b class="${b.odds>b.close?"pos":"neg"}">(${b.odds>b.close?"+":""}${((b.odds/b.close-1)*100).toFixed(0)}%)</b>`:""}${b.stake?` · ${b.stake} €`:""}${b.status!=="open"?` · <b class="${pnlOf(b)>=0?"pos":"neg"}">${pnlOf(b)>=0?"+":""}${pnlOf(b).toFixed(2)} €</b>`:""}${b.auto?` · risultato ${b.result||""}`:""}</div></div>
       <div class="bet-a">${b.status==="open"?`<button class="btn small" data-id="${b.id}" data-s="won">Vinta</button><button class="btn small ghost" data-id="${b.id}" data-s="lost">Persa</button><button class="btn small ghost" data-id="${b.id}" data-s="more" aria-label="Altro">⋯</button>`
         :`<span class="st">${label[b.status]}</span><button class="btn small ghost" data-id="${b.id}" data-s="reopen" aria-label="Riapri">↺</button><button class="btn small ghost" data-id="${b.id}" data-s="del" aria-label="Elimina">✕</button>`}</div></div>`).join("")||'<p class="note">Nessuna giocata in questa vista.</p>'}`
-   :`<p class="empty">Nessuna giocata registrata. Nel Top della settimana tocca <b>La gioco</b> sotto una giocata, oppure apri una partita e tocca una riga della tabella.</p>`}
+   :`<p class="empty">Nessuna giocata registrata. In Home o nella scheda Partita tocca <b>+ La gioco</b> sotto una giocata.</p>`}
    ${registerTable(list)}
    ${cassaPanel()}
    <div class="panel"><h3 style="margin-top:0">Backup</h3><p class="note">Con l'account il diario si salva online da solo; senza, resta solo in questo browser. Esportalo ogni tanto: se cambi telefono lo reimporti.</p>
@@ -1299,11 +1297,11 @@ function wirePicks(el){
   el.querySelectorAll("[data-go]").forEach(b=>b.addEventListener("click",()=>goMatch(DATA.fixtures[+b.dataset.go])));
   el.querySelectorAll("[data-pf]").forEach(b=>b.addEventListener("click",()=>{const f=DATA.fixtures[+b.dataset.pf];quickAdd(f,f.picks.find(p=>p.key===b.dataset.pk))}));
   el.querySelectorAll("[data-af]").forEach(b=>b.addEventListener("click",()=>{const f=DATA.fixtures[+b.dataset.af],p=f.picks.find(x=>x.key===b.dataset.ak);addToSched(legOf(f,chipLabel(p),p.prob,DATA.mdefs[p.key]))}))}
-function goTab(t){document.querySelector(`nav button[data-tab="${t}"]`).click();window.scrollTo(0,0)}
+function goTab(t){showTab(t);window.scrollTo(0,0)}
 function goMatch(f){PT.league=f.league;PT.fid=fid(f);goTab("match")}
 
 /* ---------- HOME ---------- */
-const HOME={n:3,days:7};
+const HOME={n:3,days:7,q:"",multi:false,find:false};
 function homePicks(days){
   return DATA.fixtures.filter(f=>inL(f.league)&&within(f,days)&&!f.new_team.some(Boolean)).map(f=>{
     const p=f.picks.filter(p=>okPick(p)&&p.prob>=.40&&p.prob<=.75&&lift(p)>0.02).sort((a,b)=>hscore(b)-hscore(a))[0];return p?{f,p}:null})
@@ -1325,13 +1323,19 @@ function renderHome(){
   const ip=homePicks(HOME.days);if(ip.length>=2)multis.push({t:"Doppia interessante",c:ip.slice(0,2)});
   multis.forEach(m=>m.prob=m.c.reduce((a,x)=>a*x.p.prob,1));
   const seg=(k,opts)=>`<span class="seg" role="group">${opts.map(([v,l])=>`<button aria-pressed="${HOME[k]===v}" data-hk="${k}" data-v="${v}">${l}</button>`).join("")}</span>`;
-  el.innerHTML=`<div class="hero"><div><div class="hero-k">Le giocate migliori, probabili e non scontate</div><div class="hero-v">${range}</div></div><div class="hero-n"><b>${DATA.fixtures.length}</b> partite<br>in calendario</div></div>
-   <div class="panel"><h2 style="margin-bottom:2px">Cerca una partita</h2><p class="note" style="margin:0 0 8px">Scegli campionato e partita: trovi attacco contro difesa, clima, tiri in porta e le giocate migliori.</p>
-     ${PT.league?pickerHtml(PT.league,PT.fid,"h"):'<p class="empty">Nessuna partita in calendario.</p>'}<button class="btn" id="hGo" style="margin-top:8px">Apri la partita →</button></div>
+  el.innerHTML=`<div class="panel askp"><h2 style="margin-bottom:2px">💬 Chiedi a Claude</h2>
+     <p class="note" style="margin:0 0 8px">Scegli la partita e scrivi la domanda: l'app prepara un messaggio con tutti i suoi dati (attesi, medie, scontri diretti, giocate migliori). Tu lo incolli in Claude, che cerca anche formazioni e statistiche dei giocatori.</p>
+     ${PT.league?pickerHtml(PT.league,PT.fid,"h"):'<p class="empty">Nessuna partita in calendario.</p>'}
+     <textarea id="hQ" rows="2" placeholder="es. Conviene 1+ tiri in porta del centravanti di casa? Quanti cartellini ti aspetti?">${esc(HOME.q||"")}</textarea>
+     <div class="row" style="margin-top:8px"><button class="btn" id="hAsk">Copia e apri Claude</button><button class="btn ghost" id="hGo">Apri la partita →</button></div>
+     <div id="hR" class="note" aria-live="polite" style="margin-top:6px"></div></div>
+   ${formStrip()}
+   <div class="hero"><div><div class="hero-k">Le giocate migliori, probabili e non scontate</div><div class="hero-v">${range}</div></div><div class="hero-n"><b>${DATA.fixtures.length}</b> partite<br>in calendario</div></div>
+
    <div class="row toolbar" style="margin-top:6px">${seg("n",[[3,"Top 3"],[5,"Top 5"]])}${seg("days",[[3,"Weekend"],[7,"7 giorni"]])}</div>
    ${picks.length?picks.map(({f,p},i)=>`<article class="tc ${i===0?"first":""}"><div class="tc-head"><span class="rk">${i+1}</span><div><div class="tc-teams">${esc(f.home)} <span>vs</span> ${esc(f.away)}${f.big?'<span class="bigm">Big match</span>':""}${f.rivalry?`<span class="bigm hot">${esc(f.rivalry.name)}</span>`:""}</div>
       <div class="note">${esc(f.league)} · ${dShort(f)} ${esc(f.time||"")}</div></div></div>
-      <div class="tp">${ring(p.prob,true)}<div><div class="tp-l">${chipLabel(p)}</div>${liftHtml(p)}<div class="tp-w">${why(f,p)}</div>${oddsLine(p)}${pickBtns(f,p,true)}</div></div></article>`).join("")
+      <div class="tp">${ring(p.prob,true)}<div><div class="tp-l">${chipLabel(p)} ${gradeBadge(f,p)}</div>${liftHtml(p)}<div class="tp-w">${why(f,p)}</div>${oddsLine(p)}${pickBtns(f,p,true)}</div></div></article>`).join("")
      :'<p class="empty">Nessuna giocata interessante nel periodo scelto. Prova "7 giorni".</p>'}
    <h2 style="margin-top:22px">Multiple consigliate</h2>
    ${multis.length?multis.map((m,i)=>`<div class="mcard"><div class="mhead"><div>${ring(m.prob,true)}</div><div><div class="sheet-t" style="margin:0">${m.t}</div>
@@ -1339,14 +1343,25 @@ function renderHome(){
       ${m.c.map(x=>`<div class="mleg"><span class="pill">${pct(x.p.prob)}</span><div><b>${chipLabel(x.p)}</b><div class="note">${esc(x.f.home)}–${esc(x.f.away)} · ${dShort(x.f)} ${esc(x.f.time||"")}</div></div></div>`).join("")}
       <button class="playbtn addm" data-hm="${i}">Metti in schedina</button></div>`).join("")
      :'<p class="empty">Non ci sono abbastanza partite per una multipla.</p>'}
-   <div class="row" style="margin-top:6px"><button class="btn ghost" data-goto="top">Tutte le giocate della settimana</button><button class="btn ghost" data-goto="multi">Altre multiple</button></div>
-   <p class="note">Le giocate in alto mescolano probabilità e "interessantezza": quanto questa partita si discosta dalla media del campionato. "Più sicura" usa solo eventi tra il 60 e l'85%, su mercati diversi quando possibile. Mostra solo i mercati scelti in ⚙ Mercati.</p>`;
+   <details class="hd" id="hMultiD" ${HOME.multi?"open":""}><summary>Altre multiple: doppie, triple, quadruple per campionato</summary><div id="multi"></div></details>
+   ${valueStrip()}
+   <h2 style="margin-top:22px">Cerca giocata</h2>
+   <details class="hd" id="hFindD" ${HOME.find?"open":""}><summary>🔎 Scegli una giocata, ti dico in quali partite farla</summary><div id="find"></div></details>
+   <p class="note">Le giocate in alto mescolano probabilità e "interessantezza": quanto questa partita si discosta dalla media del campionato. "Più sicura" usa solo eventi tra il 60 e l'85%, su mercati diversi quando possibile. Mostra solo i mercati scelti in ⚙ Mercati. La lettera A–D è la pagella della giocata: toccala per vedere da cosa dipende.</p>`;
   el.querySelectorAll("[data-hk]").forEach(b=>b.addEventListener("click",()=>{HOME[b.dataset.hk]=+b.dataset.v;renderHome()}));
-  el.querySelectorAll("[data-goto]").forEach(b=>b.addEventListener("click",()=>goTab(b.dataset.goto)));
+  const lazy=(id,key,fn)=>{const d=$(id);if(!d)return;if(d.open)fn();d.addEventListener("toggle",()=>{HOME[key]=d.open;if(d.open)fn()})};
+  lazy("hMultiD","multi",renderMulti);lazy("hFindD","find",renderFind);
+  el.querySelectorAll("[data-fk]").forEach(b=>b.addEventListener("click",()=>{TR.src="live";TR.open=b.dataset.fk;goTab("trend")}));
   el.querySelectorAll("[data-hm]").forEach(b=>b.addEventListener("click",()=>{const m=multis[+b.dataset.hm];saveSched(m.c.map(x=>legOf(x.f,chipLabel(x.p),x.p.prob,DATA.mdefs[x.p.key])));schedSheet()}));
   $("hL")?.addEventListener("change",e=>{PT.league=e.target.value;PT.fid=null;renderHome()});
   $("hF")?.addEventListener("change",e=>{PT.fid=e.target.value});
   $("hGo")?.addEventListener("click",()=>{PT.fid=$("hF")?.value||PT.fid;goTab("match")});
+  $("hQ")?.addEventListener("input",e=>{HOME.q=e.target.value});
+  $("hAsk")?.addEventListener("click",async()=>{const id=$("hF")?.value||PT.fid,f=DATA.fixtures.find(x=>fid(x)===id);if(!f)return;PT.fid=id;
+    const txt=aiPrompt(f,$("hQ").value.trim());let ok=true;
+    try{await navigator.clipboard.writeText(txt)}catch(e){ok=false}
+    if(ok){$("hR").innerHTML='<span class="pos">Messaggio copiato.</span> In Claude tieni premuto nel campo di testo e scegli <b>Incolla</b>, poi invia.';window.open("https://claude.ai/new","_blank")}
+    else $("hR").innerHTML='Copia a mano il testo qui sotto e incollalo in Claude:<textarea rows="8" style="width:100%;margin-top:6px">'+esc(txt)+'</textarea>'});
   wirePicks(el)}
 
 /* ---------- PARTITA ---------- */
@@ -1408,7 +1423,7 @@ function climateHtml(f){const C=climate(f);if(!C)return'<p class="note">Dati su 
     if(fo&&fo.def>=1.08)bits.push(`fa commettere molti falli agli avversari`);return bits.length?`<b>${esc(t)}</b> ${bits.join(", ")}.`:`<b>${esc(t)}</b> nella media per falli e cartellini.`};
   tips.push([fh?.att>=1.08||fa?.att>=1.08?"warn":"","F",team(f.home,fh,ch)+" "+team(f.away,fa,ca)]);
   return`<p class="ovv ${vc}">${vt}</p>
-   <div class="kpis"><div class="kpi"><div class="k">Cartellini attesi</div><div class="v">${C.e.toFixed(1)}${Math.abs(C.fac-1)>=.02?` → ${(C.e*C.fac).toFixed(1)}`:""}</div><div class="d">media campionato ${f.lavg?.cards??"–"}${Math.abs(C.fac-1)>=.02?" · con scontri diretti e derby":""}</div></div>
+   <div class="kpis"><div class="kpi"><div class="k">Cartellini attesi</div><div class="v">${C.e.toFixed(1)}${Math.abs(C.fac-1)>=.02?` → ${(C.e*C.fac).toFixed(1)}`:""}</div><div class="d">media campionato ${f.lavg?.cards??"–"}${Math.abs(C.fac-1)>=.02?(f.rivalry?" · con scontri diretti e derby":" · con gli scontri diretti"):""}</div></div>
     <div class="kpi"><div class="k">Over ${C.line} cartellini</div><div class="v">${pct(C.pc)}</div><div class="d">modello ${pct(C.pm)}${Math.abs(C.pc-C.pm)>=.005?` · ${C.pc>C.pm?"+":"−"}${Math.abs((C.pc-C.pm)*100).toFixed(0)} per il clima`:""}</div></div>
     ${C.ef?`<div class="kpi"><div class="k">Falli attesi</div><div class="v">${C.ef.toFixed(1)}</div><div class="d">media campionato ${f.lavg?.fouls??"–"}</div></div>`:""}</div>
    ${tips.map(([c,i,t])=>`<div class="tip ${c}"><span class="ti">${i}</span><div>${t}</div></div>`).join("")}
@@ -1448,7 +1463,7 @@ function favHtml(f){
   const blocks=FAMILIES.filter(([k])=>FAV.has(k)).map(([k,l])=>{
     const ps=f.picks.filter(p=>family(p.key)===k&&p.prob>=.25&&p.prob<=.92).sort((a,b)=>hscore(b)-hscore(a));if(!ps.length)return"";
     const open=PT.open[k],show=open?ps:ps.slice(0,3);
-    return`<div class="fam"><h3>${l}</h3>${show.map(p=>`<div class="mrow"><span class="pill">${pct(p.prob)}</span><div class="mrow-t"><b>${chipLabel(p)}</b> <span class="dot ${p.reliability}" title="affidabilità del mercato"></span>
+    return`<div class="fam"><h3>${l}</h3>${show.map(p=>`<div class="mrow"><span class="pill">${pct(p.prob)}</span><div class="mrow-t"><b>${chipLabel(p)}</b> ${gradeBadge(f,p)}
       <div class="note">${p.base!=null?`di solito ${pct(p.base)} · ${lift(p)>=0?"+":""}${(lift(p)*100).toFixed(0)} punti · `:""}quota giusta ${p.fair_odds.toFixed(2)}${p.odds?` · quota ${p.nbook?"media ":""}${p.odds.toFixed(2)}${p.edge>=0.03?' <span class="tag hi">valore</span>':""}`:""}</div></div><div class="mrow-a">${pickBtns(f,p,false)}</div></div>`).join("")}
       ${ps.length>3?`<button class="more" data-fo="${k}">${open?"Mostra meno ▴":`Mostra tutte (${ps.length}) ▾`}</button>`:""}</div>`}).join("");
   return`<div class="row" style="gap:6px;margin-bottom:8px">${chips}</div>${blocks||'<p class="note">Scegli almeno un mercato.</p>'}
@@ -1476,7 +1491,7 @@ function renderMatch(){
     <p class="note" style="margin:8px 0 0;text-align:center">Gol attesi <b>${eg?eg[0].toFixed(1)+" – "+eg[1].toFixed(1):"–"}</b>${top?` · risultato più probabile <b>${top[0]}-${top[1]}</b> (${(top[2]*100).toFixed(0)}%)`:""}${f.new_team.some(Boolean)?" · ⚠ una squadra senza storico nel campionato: stime meno affidabili":""}</p>
     ${f.absent&&f.absent.some(a=>a.length)?`<div class="absent">${[0,1].map(k=>f.absent[k].length?`<div><b>Assenti ${esc(k?f.away:f.home)}:</b> ${f.absent[k].map(p=>`${esc(p.n)}${p.type&&/questionable/i.test(p.type)?" (in dubbio)":""}`).join(", ")}</div>`:"").join("")}</div>`:""}</div>
    <h2>Le migliori per questa partita</h2>
-   ${best.length?best.map((p,i)=>`<div class="tp" style="border-top:${i?"1px solid var(--line)":"0"}">${ring(p.prob,i===0)}<div><div class="tp-l">${chipLabel(p)}</div>${liftHtml(p)}<div class="tp-w">${why(f,p)}</div>${oddsLine(p)}${pickBtns(f,p,false)}</div></div>`).join("")
+   ${best.length?best.map((p,i)=>`<div class="tp" style="border-top:${i?"1px solid var(--line)":"0"}">${ring(p.prob,i===0)}<div><div class="tp-l">${chipLabel(p)} ${gradeBadge(f,p)}</div>${liftHtml(p)}<div class="tp-w">${why(f,p)}</div>${oddsLine(p)}${pickBtns(f,p,false)}</div></div>`).join("")
      :'<p class="note">Nessuna giocata si discosta abbastanza dalla media del campionato: partita "normale". Guarda i tuoi mercati qui sotto.</p>'}
    <h2 style="margin-top:20px">Attacco contro difesa</h2>
    <div class="row toolbar"><span class="seg" role="group">${MS.map(([s,l])=>`<button aria-pressed="${PT.ms===s}" data-ms="${s}">${l}</button>`).join("")}</span></div>
@@ -1503,6 +1518,123 @@ function renderMatch(){
   $("pAll").addEventListener("toggle",e=>{const dd=e.target;if(dd.open&&!dd.querySelector(".detail"))dd.appendChild(matchDetail(f,"pt"))});
   wirePicks(el)}
 
+/* ---------- FORMA DEI MERCATI E PAGELLA ---------- */
+const famOf=h=>family(h.key)||h.group;
+const famName=k=>(FAMILIES.find(f=>f[0]===k)||[k,k])[1];
+const hitR=a=>a.length?a.filter(h=>h.won).length/a.length:0;
+const predR=a=>a.length?a.reduce((x,h)=>x+h.prob,0)/a.length:0;
+const doneH=()=>(DATA.history||[]).filter(h=>h.won!=null&&!h.void);
+function formTable(days=21,min=6){const since=new Date(Date.now()-days*864e5).toISOString().slice(0,10),g={};
+  doneH().filter(h=>h.date>=since&&inL(h.league)).forEach(h=>(g[famOf(h)]??=[]).push(h));
+  return Object.entries(g).filter(([,a])=>a.length>=min).map(([k,a])=>({k,n:a.length,hit:hitR(a),pred:predR(a),d:hitR(a)-predR(a)})).sort((a,b)=>b.d-a.d)}
+let FORM=null;const formOf=k=>{FORM??=Object.fromEntries(formTable(30,6).map(r=>[r.k,r.d]));return FORM[k]??null};
+const REL={green:1,yellow:.5,red:0};
+function grade(p){
+  const parts=[
+    ["Non scontata",Math.max(0,Math.min(1,lift(p)/0.15)),.30,p.base!=null?`${lift(p)>=0?"+":""}${(lift(p)*100).toFixed(0)} punti sulla media del campionato`:"media del campionato non disponibile"],
+    ["Affidabilità del mercato",REL[p.reliability]??.5,.25,{green:"verde nel backtest",yellow:"gialla nel backtest",red:"rossa nel backtest"}[p.reliability]||"–"],
+    ["Probabilità",p.prob>=.5&&p.prob<=.78?1:p.prob<.5?Math.max(0,(p.prob-.3)/.2):Math.max(0,(.92-p.prob)/.14),.15,`${pct(p.prob)} (ideale tra 50 e 78%)`],
+    ["Valore della quota",p.edge!=null?Math.max(0,Math.min(1,(p.edge+.04)/.1)):.5,.15,p.edge!=null?`${p.edge>=0?"+":""}${(p.edge*100).toFixed(1)} punti rispetto al bookmaker`:"quota non disponibile (voto neutro)"],
+    ["Forma del mercato",(()=>{const f=formOf(family(p.key));return f==null?.5:Math.max(0,Math.min(1,.5+f/.2))})(),.15,(()=>{const f=formOf(family(p.key));return f==null?"pochi dati recenti (voto neutro)":`ultimi 30 giorni ${f>=0?"+":""}${(f*100).toFixed(0)} punti rispetto al previsto`})()]];
+  const s=parts.reduce((a,[,v,w])=>a+v*w,0);
+  return{g:s>=.72?"A":s>=.58?"B":s>=.44?"C":"D",s,parts}}
+const gradeBadge=(f,p)=>{const G=grade(p).g;return`<button class="grade g${G}" data-gf="${fxIdx(f)}" data-gk="${esc(p.key)}" aria-label="Pagella ${G}: tocca per i dettagli">${G}</button>`};
+function gradeSheet(f,p){const G=grade(p),sh=document.createElement("div");sh.className="sheet-bg";
+  sh.innerHTML=`<div class="sheet" role="dialog" aria-label="Pagella"><div class="grab"></div>
+    <div class="row" style="gap:10px"><span class="grade g${G.g}" style="font-size:1.6rem;width:46px;height:46px">${G.g}</span><div><div class="sheet-t">${chipLabel(p)}</div><div class="note">${esc(f.home)}–${esc(f.away)}</div></div></div>
+    ${G.parts.map(([n,v,w,t])=>`<div class="pb"><div class="pb-l"><b>${n}</b> <span class="note">· pesa ${Math.round(w*100)}% · ${t}</span></div><div class="pb-bar gbar"><span style="left:0;width:${v*100}%"></span></div><div class="pb-v">${Math.round(v*10)}/10</div></div>`).join("")}
+    <p class="note">A = tutto a favore, D = meglio lasciar perdere. La pagella non sostituisce la quota: gioca solo se la quota del bookmaker supera ${p.fair_odds.toFixed(2)}.</p>
+    <button class="btn ghost gX" style="margin-top:6px">Chiudi</button></div>`;
+  document.body.appendChild(sh);sh.querySelector(".gX").addEventListener("click",()=>sh.remove());sh.addEventListener("click",e=>{if(e.target===sh)sh.remove()})}
+document.addEventListener("click",e=>{const b=e.target.closest(".grade[data-gf]");if(!b)return;e.stopPropagation();const f=DATA.fixtures[+b.dataset.gf],p=f?.picks.find(x=>x.key===b.dataset.gk);if(p)gradeSheet(f,p)});
+
+/* ---------- ANDAMENTO ---------- */
+const TR={src:"live",sort:"diff",open:null};
+function btFamilies(){const g={};(DATA.backtest?.metrics||[]).forEach(m=>{const k=family(m.market);if(!k)return;const x=g[k]??={n:0,h:0,p:0};x.n+=m.n;x.h+=m.hit_rate*m.n;x.p+=m.avg_prob*m.n});
+  return Object.entries(g).map(([k,x])=>({k,n:x.n,hit:x.h/x.n,pred:x.p/x.n,d:(x.h-x.p)/x.n}))}
+function liveFamilies(done){const g={};done.forEach(h=>(g[famOf(h)]??=[]).push(h));
+  return Object.entries(g).filter(([,a])=>a.length>=5).map(([k,a])=>({k,n:a.length,hit:hitR(a),pred:predR(a),d:hitR(a)-predR(a),list:a}))}
+const dcl=d=>d>=-.005?"good":d>=-.04?"mid":"bad";
+const ptDiff=d=>Math.abs(d)<.005?`<span class="note">in linea</span>`:`<span class="${d>0?"pos":"neg"}">${d>0?"+":"−"}${Math.abs(d*100).toFixed(0)} pt</span>`;
+function rankHtml(rows,live){
+  rows=rows.slice().sort(TR.sort==="hit"?(a,b)=>b.hit-a.hit:(a,b)=>b.d-a.d);
+  if(!rows.length)return`<p class="note">${live?"Servono almeno 5 previsioni verificate per mercato: guarda intanto il backtest.":"Backtest non disponibile."}</p>`;
+  return rows.map(r=>`<div class="rk-row ${live?"tap":""}" ${live?`data-fam="${esc(r.k)}"`:""}>
+      <div class="rk-t"><b>${esc(famName(r.k))}</b><span class="note">${r.n} ${live?"verificate":"nel backtest"}${live&&r.n<20?" · pochi dati":""}</span></div>
+      <div class="rk-bar"><span class="fill ${dcl(r.d)}" style="width:${r.hit*100}%"></span><span class="mark" style="left:${r.pred*100}%" title="previsto"></span></div>
+      <div class="rk-v"><b>${pct(r.hit)}</b>${ptDiff(r.d)}</div></div>
+    ${live&&TR.open===r.k?`<div class="rk-list">${r.list.slice().sort((a,b)=>b.date.localeCompare(a.date)).slice(0,15).map(h=>`<div class="rk-li"><span class="${h.won?"ok":"ko"}">${h.won?"✓":"✗"}</span><span>${h.date.slice(8)}/${h.date.slice(5,7)}</span><span class="rk-m">${esc(h.home)}–${esc(h.away)} · ${esc(chipLabel(h))}</span><span>${pct(h.prob)}</span></div>`).join("")}</div>`:""}`).join("")}
+function weeks(done){const g={};done.forEach(h=>{const d=new Date(h.date+"T12:00"),m=new Date(d);m.setDate(d.getDate()-((d.getDay()+6)%7));(g[m.toISOString().slice(0,10)]??=[]).push(h)});
+  return Object.entries(g).sort().map(([w,a])=>({w,n:a.length,hit:hitR(a),pred:predR(a)}))}
+function calHtml(done){const by={};done.forEach(h=>(by[h.date]??=[]).push(h));const today=new Date();today.setHours(12,0,0,0);
+  const start=new Date(today);start.setDate(today.getDate()-7*8+1);start.setDate(start.getDate()-((start.getDay()+6)%7));
+  let cells="";for(let d=new Date(start);d<=today;d.setDate(d.getDate()+1)){const k=d.toISOString().slice(0,10),a=by[k];
+    if(!a){cells+=`<span class="cd e" title="${k}"></span>`;continue}const r=hitR(a),p=predR(a),diff=r-p;
+    cells+=`<span class="cd ${diff>=.05?"g2":diff>=0?"g1":diff>=-.08?"r1":"r2"}" title="${k}: ${a.filter(h=>h.won).length}/${a.length} uscite (previste ${pct(p)})">${d.getDate()}</span>`}
+  return`<div class="cal"><span class="cdh">L</span><span class="cdh">M</span><span class="cdh">M</span><span class="cdh">G</span><span class="cdh">V</span><span class="cdh">S</span><span class="cdh">D</span>${cells}</div>
+   <div class="row note" style="gap:10px;margin-top:6px"><span><span class="cd g2 lg"></span> sopra il previsto</span><span><span class="cd g1 lg"></span> in linea</span><span><span class="cd r1 lg"></span> poco sotto</span><span><span class="cd r2 lg"></span> male</span></div>`}
+function youVsModel(done){
+  const D=closedOf(loadDiary()),ids=new Set((DATA.history||[]).map(h=>h.id));
+  const follow=D.filter(b=>b.key&&ids.has(`${b.date}|${b.home}|${b.away}|${b.key}`)),mine=D.filter(b=>!follow.includes(b));
+  const col=(t,l,s)=>`<div class="kpi"><div class="k">${t}</div><div class="v">${l.length?pct(s.hit):"–"}</div><div class="d">${l.length?`su ${l.length} · previste ${pct(s.exp)}${s.staked?` · <span class="${s.profit>=0?"pos":"neg"}">ROI ${(s.roi*100).toFixed(1)}%</span>`:""}`:"nessuna ancora"}</div></div>`;
+  const sf=statsOf(follow),sm=statsOf(mine);
+  let verdict="Segna le tue giocate nel diario (+ La gioco): dopo una ventina di giocate chiuse qui vedi se le tue scelte aggiungono qualcosa al modello.";
+  if(follow.length>=15&&mine.length>=15){const a=sf.hit-sf.exp,b=sm.hit-sm.exp;
+    verdict=a>b+.03?"Le giocate proposte dall'app ti stanno rendendo più delle tue scelte personali: conviene seguirla di più.":b>a+.03?"Le tue scelte personali stanno andando meglio delle proposte dell'app: il tuo occhio aggiunge qualcosa (ma continua a verificarlo).":"Per ora tu e il modello andate in modo simile."}
+  return`<div class="kpis">${col("Modello (tutte le proposte)",done,{hit:hitR(done),exp:predR(done)})}${col("Tu, seguendo l'app",follow,sf)}${col("Tu, di tua iniziativa",mine,sm)}</div><p class="note">${verdict}</p>`}
+function renderTrend(){
+  const el=$("trend"),done=doneH().filter(h=>inL(h.league)),pending=(DATA.history||[]).filter(h=>h.won==null&&inL(h.league));
+  const since=new Date(Date.now()-7*864e5).toISOString().slice(0,10),wk=done.filter(h=>h.date>=since);
+  const live=TR.src==="live",rows=live?liveFamilies(done):btFamilies();
+  const W=weeks(done).slice(-12);
+  const lg={};done.forEach(h=>(lg[h.league]??=[]).push(h));
+  const LG=Object.entries(lg).filter(([,a])=>a.length>=10).map(([k,a])=>({k,n:a.length,hit:hitR(a),pred:predR(a),d:hitR(a)-predR(a)})).sort((a,b)=>b.d-a.d);
+  const bands=[[.4,.5],[.5,.6],[.6,.7],[.7,.8]];
+  let cal;if(live)cal=bands.map(([lo,hi])=>{const a=done.filter(h=>h.prob>=lo&&h.prob<hi);return{l:`${lo*100}-${hi*100}%`,n:a.length,p:predR(a),y:hitR(a)}});
+  else cal=bands.map(([lo,hi])=>{let n=0,p=0,y=0;Object.values(DATA.backtest?.calibration||{}).forEach(bs=>bs.forEach(b=>{if(b.p>=lo&&b.p<hi){n+=b.n;p+=b.p*b.n;y+=b.y*b.n}}));return{l:`${lo*100}-${hi*100}%`,n,p:n?p/n:0,y:n?y/n:0}});
+  cal=cal.filter(c=>c.n);
+  const AD=Object.entries(DATA.adapt||{}).sort((a,b)=>b[1].n-a[1].n);
+  const cd=CLIMA.filter(h=>h.won!=null&&inL(h.league)),br=k=>cd.reduce((a,h)=>a+(h[k]-h.won)**2,0)/cd.length;
+  const seg=(k,opts)=>`<span class="seg" role="group">${opts.map(([v,l])=>`<button aria-pressed="${TR[k]===v}" data-tr="${k}" data-v="${v}">${l}</button>`).join("")}</span>`;
+  el.innerHTML=`<div class="hero"><div><div class="hero-k">Quanto ci prende il modello</div><div class="hero-v">${done.length?pct(hitR(done))+" uscite":"in raccolta"}</div><div class="hero-k">${done.length?`previste ${pct(predR(done))} · ${done.length} verificate`:"le previsioni si verificano da sole a partita finita"}</div></div>
+     <div class="hero-n"><b>${wk.length?pct(hitR(wk)):"–"}</b><br>ultimi 7 giorni<br>${pending.length} in attesa</div></div>
+   <h2>Le giocate più azzeccate</h2>
+   <div class="row toolbar">${seg("src",[["live","Storico reale"],["bt","Backtest"]])}${seg("sort",[["diff","Più sopra le attese"],["hit","Più uscite"]])}</div>
+   <div class="panel">${rankHtml(rows,live)}
+     <p class="note" style="margin-bottom:0">Barra = quante volte è uscita, tacca nera = quanto prevedeva il modello. Verde: esce almeno quanto previsto. ${live?"Tocca un mercato per vedere le ultime previsioni.":"Il backtest simula le stagioni passate: tanti dati, ma non sono giocate vere."}</p></div>
+   ${live&&done.length?`<h2>Settimana per settimana</h2><div class="panel"><div class="chartbox"><canvas id="trW"></canvas></div><p class="note" style="margin-bottom:0">Linea verde = uscite, tratteggiata = previste. Le barre grigie sono quante previsioni sono state verificate.</p></div>
+   <h2>Calendario</h2><div class="panel">${calHtml(done)}</div>`:""}
+   <h2>Le percentuali sono affidabili?</h2>
+   <div class="panel">${cal.length?`<div class="chartbox"><canvas id="trC"></canvas></div><p class="note" style="margin-bottom:0">Per ogni fascia: quanto diceva l'app e quanto è uscito davvero${live?"":" (backtest)"}. Barre simili = percentuali di cui fidarsi.</p>`:'<p class="note">Ancora pochi dati: passa a "Backtest".</p>'}</div>
+   ${LG.length&&live?`<h2>Per campionato</h2><div class="panel">${LG.map(r=>`<div class="rk-row"><div class="rk-t"><b>${esc(r.k)}</b><span class="note">${r.n} verificate</span></div><div class="rk-bar"><span class="fill ${dcl(r.d)}" style="width:${r.hit*100}%"></span><span class="mark" style="left:${r.pred*100}%"></span></div><div class="rk-v"><b>${pct(r.hit)}</b>${ptDiff(r.d)}</div></div>`).join("")}</div>`:""}
+   <h2>Tu contro il modello</h2><div class="panel">${youVsModel(done)}</div>
+   <h2>Il modello impara</h2><div class="panel">
+     ${AD.length?`<div class="scroll"><table><tr><th>Mercato</th><th>Verificate</th><th>Previsto</th><th>Uscito</th><th>Correzione</th></tr>${AD.map(([g,a])=>`<tr><td>${esc(g)}</td><td>${a.n}${a.active?"":` <span class="note">/50</span>`}</td><td>${pct(a.pred)}</td><td>${pct(a.hit)}</td><td>${!a.active?'<span class="note">in raccolta</span>':Math.abs(a.k-1)<0.01?"nessuna":a.k<1?`più prudente (×${a.k.toFixed(2)})`:`più decisa (×${a.k.toFixed(2)})`}</td></tr>`).join("")}</table></div>`:'<p class="note">Nessuna previsione verificata ancora.</p>'}
+     <p class="note">Dopo 50 previsioni verificate per mercato l'app corregge da sola le sue percentuali: più prudenti se era troppo sicura, più decise se era troppo cauta.</p>
+     ${CLIMA.length?`<h3>Correzione "clima" dei cartellini</h3>${cd.length?`<div class="kpis"><div class="kpi"><div class="k">Verificate</div><div class="v">${cd.length}</div><div class="d">${cd.length<30?"servono almeno 30":"prima idea affidabile"}</div></div>
+       <div class="kpi"><div class="k">Errore modello</div><div class="v">${br("prob").toFixed(3)}</div></div><div class="kpi"><div class="k">Errore con clima</div><div class="v ${br("clima")<=br("prob")?"pos":"neg"}">${br("clima").toFixed(3)}</div><div class="d">${cd.length<30?"in raccolta":br("clima")<br("prob")?"la correzione aiuta":"non aiuta: ignorala"}</div></div></div>`:`<p class="note">${CLIMA.length} partite in attesa di risultato.</p>`}`:""}</div>`;
+  el.querySelectorAll("[data-tr]").forEach(b=>b.addEventListener("click",()=>{TR[b.dataset.tr]=b.dataset.v;renderTrend()}));
+  el.querySelectorAll("[data-fam]").forEach(b=>b.addEventListener("click",()=>{TR.open=TR.open===b.dataset.fam?null:b.dataset.fam;renderTrend()}));
+  if(live&&W.length)chart("trW",$("trW"),{type:"bar",data:{labels:W.map(w=>`${w.w.slice(8)}/${w.w.slice(5,7)}`),datasets:[
+      {type:"line",label:"Uscite",data:W.map(w=>+(w.hit*100).toFixed(1)),borderColor:css("--turf"),backgroundColor:css("--turf"),tension:.3,yAxisID:"y"},
+      {type:"line",label:"Previste",data:W.map(w=>+(w.pred*100).toFixed(1)),borderColor:css("--muted"),borderDash:[5,4],pointRadius:0,yAxisID:"y"},
+      {type:"bar",label:"Verificate",data:W.map(w=>w.n),backgroundColor:css("--line"),yAxisID:"n"}]},
+    options:{maintainAspectRatio:false,plugins:{legend:{position:"bottom",labels:{boxWidth:12}}},scales:{y:{min:0,max:100,ticks:{callback:v=>v+"%"}},n:{position:"right",grid:{display:false},beginAtZero:true}}}});
+  if(cal.length)chart("trC",$("trC"),{type:"bar",data:{labels:cal.map(c=>c.l),datasets:[{label:"Detto dall'app",data:cal.map(c=>+(c.p*100).toFixed(1)),backgroundColor:css("--draw"),borderRadius:3},{label:"Uscito",data:cal.map(c=>+(c.y*100).toFixed(1)),backgroundColor:css("--turf"),borderRadius:3}]},
+    options:{maintainAspectRatio:false,plugins:{legend:{position:"bottom",labels:{boxWidth:12}},tooltip:{callbacks:{afterBody:c=>`${cal[c[0].dataIndex].n} previsioni`}}},scales:{y:{min:0,max:100,ticks:{callback:v=>v+"%"}}}}});
+  if(TR.open)el.querySelector(`[data-fam="${CSS.escape(TR.open)}"]`)?.scrollIntoView({block:"nearest"})}
+function formStrip(){const t=formTable(21,6);if(t.length<2)return"";
+  const up=t.filter(r=>r.d>0).slice(0,3),down=t.filter(r=>r.d<0).slice(-3).reverse();if(!up.length&&!down.length)return"";
+  const chip=(r,ic)=>`<button class="fchip formc ${r.d>=0?"up":"down"}" data-fk="${esc(r.k)}">${ic} ${esc(famName(r.k))} <b>${r.d>=0?"+":"−"}${Math.abs(r.d*100).toFixed(0)} pt</b> <span class="note">(${r.n})</span></button>`;
+  return`<div class="panel"><h2 style="margin-bottom:2px">Mercati in forma</h2><p class="note" style="margin:0 0 8px">Ultime 3 settimane: quanto escono rispetto a quanto previsto.</p>
+    <div class="row" style="gap:6px">${up.map(r=>chip(r,"🔥")).join("")}${down.map(r=>chip(r,"❄")).join("")}</div></div>`}
+function valueStrip(){const now=Date.now(),lim=now+3*864e5,out=[];
+  DATA.fixtures.filter(f=>inL(f.league)&&kickoff(f)<lim&&!f.new_team.some(Boolean)).forEach(f=>f.picks.forEach(p=>{if(p.edge!=null&&p.edge>=.03&&p.prob>=.35&&p.prob<=.8&&okPick(p))out.push({f,p})}));
+  out.sort((a,b)=>b.p.edge-a.p.edge);if(!out.length)return"";
+  return`<h2 style="margin-top:22px">Quote con valore</h2>${out.slice(0,3).map(({f,p})=>`<div class="mrow"><span class="pill">${pct(p.prob)}</span><div class="mrow-t"><b>${chipLabel(p)}</b> ${gradeBadge(f,p)}
+      <div class="note">${esc(f.home)}–${esc(f.away)} · ${dShort(f)} ${esc(f.time||"")} · quota ${p.nbook?"media ":""}<b>${p.odds.toFixed(2)}</b>${p.best?` (migliore ${p.best.toFixed(2)})`:""} contro giusta ${p.fair_odds.toFixed(2)} · <span class="pos">+${(p.edge*100).toFixed(1)} pt</span></div></div><div class="mrow-a">${pickBtns(f,p,true)}</div></div>`).join("")}
+   <p class="note">Il bookmaker paga più di quanto direbbe la probabilità del modello. Su Bet365 controlla che la quota sia almeno simile.</p>`}
+
 applyReferees();
 $("mkBtn").addEventListener("click",marketSheet);
 $("acBtn").addEventListener("click",accountSheet);
@@ -1510,23 +1642,13 @@ schedPill();
 initFirebase();
 let tab="home";
 function render(){if(pruneStarted())setUpdated();$("vProb").textContent=$("fProb").value+"%";$("vMax").textContent=$("fMax").value+"%";$("vConf").textContent=$("fConf").value;
-  const pickTab=tab==="matches"||tab==="best";
-  $("filters").hidden=tab==="diary";
-  if(tab==="home"){document.querySelectorAll("#filters label").forEach((l,k)=>l.hidden=k!==0);renderHome();return}
-  if(tab==="match"){$("filters").hidden=true;renderMatch();return}
-  if(tab==="top"){document.querySelectorAll("#filters label").forEach((l,k)=>l.hidden=k!==0);renderTop();return}
-  if(tab==="analyze"){$("filters").hidden=true;renderAnalyze();return}
-  if(tab==="find"){document.querySelectorAll("#filters label").forEach((l,k)=>l.hidden=k!==0);renderFind();return}
-  if(tab==="multi"){document.querySelectorAll("#filters label").forEach((l,k)=>l.hidden=k!==0);renderMulti();return}
-  if(tab==="value"){document.querySelectorAll("#filters label").forEach((l,k)=>l.hidden=k>1);renderValue();return}
-  document.querySelectorAll("#filters label").forEach((l,k)=>l.hidden=!((k===0&&tab!=="reliability")||pickTab||(tab==="reliability"&&k===1)));
-  ({top:renderTop,find:renderFind,multi:renderMulti,value:renderValue,analyze:renderAnalyze,matches:renderMatches,teams:renderTeams,leagues:renderLeagues,best:renderBest,reliability:renderReliability,history:renderHistory,diary:renderDiary})[tab]()}
-document.querySelectorAll("nav button[data-tab]").forEach(b=>b.addEventListener("click",()=>{
-  tab=b.dataset.tab;document.querySelectorAll("nav button[data-tab]").forEach(x=>x.setAttribute("aria-selected",x===b));
-  const sec=!!b.closest("#nav2");$("moreBtn").setAttribute("aria-selected",sec);$("moreBtn").textContent=sec?`Altro: ${b.textContent} ▾`:"Altro ▾";
-  if(!sec){$("nav2").hidden=true;$("moreBtn").setAttribute("aria-expanded","false")}
-  document.querySelectorAll("main section").forEach(s=>s.hidden=s.id!==tab);render()}));
-$("moreBtn").addEventListener("click",()=>{const o=$("nav2").hidden;$("nav2").hidden=!o;$("moreBtn").setAttribute("aria-expanded",String(o))});
+  $("filters").hidden=!["home","trend"].includes(tab);
+  document.querySelectorAll("#filters label").forEach((l,k)=>l.hidden=k!==0);
+  ({home:renderHome,match:renderMatch,trend:renderTrend,diary:renderDiary,analyze:()=>{renderAnalyze();
+    $("analyze").insertAdjacentHTML("afterbegin",'<button class="btn ghost small" id="anBack" style="margin-bottom:10px">← Torna alla partita</button>');$("anBack").addEventListener("click",()=>goTab("match"))}})[tab]()}
+function showTab(t){tab=t;document.querySelectorAll("nav button[data-tab]").forEach(x=>x.setAttribute("aria-selected",x.dataset.tab===t||(t==="analyze"&&x.dataset.tab==="match")));
+  document.querySelectorAll("main section").forEach(s=>s.hidden=s.id!==t);render()}
+document.querySelectorAll("nav button[data-tab]").forEach(b=>b.addEventListener("click",()=>showTab(b.dataset.tab)));
 document.querySelectorAll(".filters select,.filters input").forEach(x=>x.addEventListener("input",render));
 setInterval(()=>{if(pruneStarted()){setUpdated();render()}},60000);
 // App installabile sul telefono (solo sul sito pubblicato su GitHub Pages)
