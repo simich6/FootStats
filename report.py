@@ -44,14 +44,14 @@ def build(fixtures: list, trends: dict, leagues: dict, bt: dict | None, demo: bo
 MANIFEST = {
     "name": "Footstats", "short_name": "Footstats", "lang": "it",
     "start_url": ".", "scope": ".", "display": "standalone",
-    "background_color": "#EEF1EC", "theme_color": "#2E6B4F",
+    "background_color": "#070D0B", "theme_color": "#070D0B",
     "icons": [{"src": "icon-192.png", "sizes": "192x192", "type": "image/png"},
               {"src": "icon-512.png", "sizes": "512x512", "type": "image/png"},
               {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}],
 }
 
 # Prima prova la rete (dati sempre freschi); senza connessione mostra l'ultima versione scaricata.
-SERVICE_WORKER = """const C="footstats-v1";
+SERVICE_WORKER = """const C="footstats-v2";
 self.addEventListener("install",e=>self.skipWaiting());
 self.addEventListener("activate",e=>e.waitUntil(self.clients.claim()));
 self.addEventListener("fetch",e=>{const r=e.request;if(r.method!=="GET"||new URL(r.url).origin!==location.origin)return;
