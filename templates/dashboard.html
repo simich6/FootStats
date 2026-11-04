@@ -186,6 +186,7 @@ details.hd[open]>summary{margin-bottom:10px}
 .rk-row.tap{cursor:pointer}.rk-t{display:flex;flex-direction:column;line-height:1.2}.rk-t .note{font-size:.78rem}
 .rk-bar{position:relative;height:12px;background:var(--bg);border-radius:6px}.rk-bar .fill{position:absolute;left:0;top:0;height:100%;border-radius:6px}
 .rk-bar .fill.good{background:var(--good)}.rk-bar .fill.mid{background:var(--mid)}.rk-bar .fill.bad{background:var(--bad)}
+.rk-bar .mark.be{background:var(--value);width:2px;opacity:.9}
 .rk-bar .mark{position:absolute;top:-4px;width:3px;height:20px;background:var(--ink);border-radius:2px;transform:translateX(-1px)}
 .rk-v{display:flex;flex-direction:column;align-items:flex-end;font:600 .95rem "Barlow Condensed",sans-serif;line-height:1.1}.rk-v b{font-size:1.15rem}
 .rk-list{background:var(--bg);border-radius:8px;padding:6px 10px;margin:4px 0 8px}
@@ -271,6 +272,18 @@ nav#nav1 button[aria-selected=true] svg{transform:translateY(-1px) scale(1.08);f
 @keyframes spIn{from{transform:perspective(500px) rotateX(70deg) scale(.6);opacity:0}}
 @keyframes spT{from{opacity:0;transform:translateY(10px)}}
 
+.slips{margin:4px 0 16px}.sl-head{display:flex;flex-direction:column;gap:2px;margin-bottom:10px}
+.qchips{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:10px}
+.qchip{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:12px;padding:10px 0;font:700 1.15rem "Barlow Condensed",sans-serif;cursor:pointer}
+.qchip[aria-pressed=true]{background:var(--turf);border-color:var(--turf);color:var(--on-turf);box-shadow:0 0 16px var(--glow);transform:translateY(-1px)}
+.slip{background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,0)),var(--surface);border:1px solid var(--line);border-radius:16px;padding:12px 14px;margin-bottom:10px;box-shadow:0 10px 28px rgba(0,0,0,.28)}
+.slip.best{border-color:var(--value);box-shadow:0 0 0 1px var(--value),0 14px 36px rgba(247,183,51,.18)}
+.sl-top{display:grid;grid-template-columns:64px minmax(0,1fr) auto;gap:12px;align-items:center;margin-bottom:4px}
+.sl-q{display:flex;flex-direction:column;line-height:1.15}.sl-q b{font:700 2.3rem/1 "Barlow Condensed",sans-serif;color:var(--value)}
+.sl-ev{display:flex;flex-direction:column;align-items:center;border:1px solid var(--line);border-radius:12px;padding:6px 10px;font-size:.75rem;color:var(--muted)}
+.sl-ev b{font:700 1.3rem "Barlow Condensed",sans-serif;color:var(--ink)}.sl-ev.pos{border-color:var(--good)}.sl-ev.pos b{color:var(--good)}
+.sl-o{flex:none;font:700 1.05rem "Barlow Condensed",sans-serif;color:var(--muted);align-self:center}
+@media (max-width:420px){.qchip{font-size:1rem;padding:8px 0}}
 /* ===== BADGE SQUADRE ===== */
 .tb{flex:none;display:inline-grid;place-items:center;width:var(--s,40px);height:var(--s,40px);border-radius:50%;font:700 calc(var(--s,40px)*.38) "Barlow Condensed",sans-serif;color:#fff;letter-spacing:.02em;
   background:radial-gradient(circle at 32% 28%,rgba(255,255,255,.45),transparent 42%),linear-gradient(145deg,hsl(var(--h) 70% 48%),hsl(var(--h) 75% 26%));box-shadow:0 4px 14px hsl(var(--h) 70% 30% / .5),inset 0 -3px 6px rgba(0,0,0,.25)}
@@ -1448,6 +1461,7 @@ function renderHome(){
      <textarea id="hQ" rows="2" placeholder="es. Conviene 1+ tiri in porta del centravanti di casa? Quanti cartellini ti aspetti?">${esc(HOME.q||"")}</textarea>
      <div class="row" style="margin-top:8px"><button class="btn" id="hAsk">Copia e apri Claude</button><button class="btn ghost" id="hGo">Apri la partita →</button></div>
      <div id="hR" class="note" aria-live="polite" style="margin-top:6px"></div></div>
+   ${slipsHtml()}
    ${formStrip()}
    <div class="hero"><div><div class="hero-k">Le giocate migliori, probabili e non scontate</div><div class="hero-v">${range}</div></div><div class="hero-n"><b class="cnt">${DATA.fixtures.length}</b> partite<br>in calendario</div></div>
 
@@ -1460,13 +1474,7 @@ function renderHome(){
         ${G.parts.map(([n,v,w,t])=>`<div class="pb" style="margin:6px 0"><div class="pb-l"><b>${n}</b> <span class="note">· ${t}</span></div><div class="pb-bar gbar"><span style="left:0;width:${v*100}%"></span></div><div class="pb-v">${Math.round(v*10)}/10</div></div>`).join("")}
         ${sf!=null?`<p class="note" style="margin:6px 0 0">Nelle ${f.similar.n} partite più simili è uscita il <b>${pct(sf)}</b> delle volte (modello ${pct(p.prob)}).</p>`:""}</article></div></div>`}).join("")
      :'<p class="empty">Nessuna giocata interessante nel periodo scelto. Prova "7 giorni".</p>'}
-   <h2 style="margin-top:22px">Multiple consigliate</h2>
-   ${multis.length?multis.map((m,i)=>`<div class="mcard"><div class="mhead"><div>${ring(m.prob,true)}</div><div><div class="sheet-t" style="margin:0">${m.t}</div>
-      <div class="vnums"><span>Probabilità <b>${(m.prob*100).toFixed(1)}%</b></span><span>Quota giusta <b>${(1/m.prob).toFixed(2)}</b></span></div></div></div>
-      ${m.c.map(x=>`<div class="mleg"><span class="pill">${pct(x.p.prob)}</span><div><b>${chipLabel(x.p)}</b><div class="note">${esc(x.f.home)}–${esc(x.f.away)} · ${dShort(x.f)} ${esc(x.f.time||"")}</div></div></div>`).join("")}
-      <button class="playbtn addm" data-hm="${i}">Metti in schedina</button></div>`).join("")
-     :'<p class="empty">Non ci sono abbastanza partite per una multipla.</p>'}
-   <details class="hd" id="hMultiD" ${HOME.multi?"open":""}><summary>Altre multiple: doppie, triple, quadruple per campionato</summary><div id="multi"></div></details>
+   <details class="hd" id="hMultiD" ${HOME.multi?"open":""}><summary>Altre multiple per campionato (doppie, triple, quadruple)</summary><div id="multi"></div></details>
    ${valueStrip()}
    <h2 style="margin-top:22px">Cerca giocata</h2>
    <details class="hd" id="hFindD" ${HOME.find?"open":""}><summary>🔎 Scegli una giocata, ti dico in quali partite farla</summary><div id="find"></div></details>
@@ -1485,7 +1493,7 @@ function renderHome(){
     try{await navigator.clipboard.writeText(txt)}catch(e){ok=false}
     if(ok){$("hR").innerHTML='<span class="pos">Messaggio copiato.</span> In Claude tieni premuto nel campo di testo e scegli <b>Incolla</b>, poi invia.';window.open("https://claude.ai/new","_blank")}
     else $("hR").innerHTML='Copia a mano il testo qui sotto e incollalo in Claude:<textarea rows="8" style="width:100%;margin-top:6px">'+esc(txt)+'</textarea>'});
-  wirePicks(el);wireTilt(el);animateCounts(el)}
+  wirePicks(el);wireTilt(el);wireSlips(el);animateCounts(el)}
 
 /* ---------- PARTITA ---------- */
 const PT={league:null,fid:null,ms:"sot",open:{},pteam:0,pavg:""};
@@ -1613,7 +1621,7 @@ function simHtml(f,best){const S=f.similar;
   return`<p class="note" style="margin-top:0">Le <b>${S.n} partite</b> di questo campionato che, prima di giocarsi, avevano il profilo più simile a questa (gol e tiri in porta attesi per le due squadre). Periodo ${S.from.slice(5,7)}/${S.from.slice(2,4)} – ${S.to.slice(5,7)}/${S.to.slice(2,4)}. Cosa è successo davvero:</p>
    <div class="kpis">${tile("goals","Gol a partita")}${tile("ht","Gol nel 1° tempo")}${tile("sot","Tiri in porta")}${tile("corners","Corner")}${tile("cards","Cartellini")}</div>
    <div class="panel" style="margin-top:8px">${rows||'<p class="note">Nessuna giocata da confrontare.</p>'}
-   <p class="note" style="margin-bottom:0">Barra = quante volte è uscita nelle partite simili, tacca nera = percentuale del modello per questa partita. Con ${S.n} partite differenze fino a 8–10 punti sono normali; oltre, meglio approfondire.</p></div>
+   <p class="note" style="margin-bottom:0">Barra = quante volte è uscita nelle partite simili, trattino = percentuale del modello per questa partita. Con ${S.n} partite differenze fino a 8–10 punti sono normali; oltre, meglio approfondire.</p></div>
    <details class="sgrid"><summary class="note">Alcune delle partite simili</summary><p class="note">${S.ex.map(esc).join(" · ")}</p></details>`}
 function renderMatch(){
   const el=$("match"),lgs=leaguesWithFx();
@@ -1750,12 +1758,13 @@ function renderTrend(){
    <h2>Le giocate più azzeccate</h2>
    <div class="row toolbar">${seg("src",[["live","Storico reale"],["bt","Backtest"]])}${seg("sort",[["diff","Più sopra le attese"],["hit","Più uscite"]])}</div>
    <div class="panel">${rankHtml(rows,live)}
-     <p class="note" style="margin-bottom:0">Barra = quante volte è uscita, tacca nera = quanto prevedeva il modello. Verde: esce almeno quanto previsto. ${live?"Tocca un mercato per vedere le ultime previsioni.":"Il backtest simula le stagioni passate: tanti dati, ma non sono giocate vere."}</p></div>
+     <p class="note" style="margin-bottom:0">Barra = quante volte è uscita, trattino = quanto prevedeva il modello. Verde: esce almeno quanto previsto. ${live?"Tocca un mercato per vedere le ultime previsioni.":"Il backtest simula le stagioni passate: tanti dati, ma non sono giocate vere."}</p></div>
    ${live&&done.length?`<h2>Settimana per settimana</h2><div class="panel"><div class="chartbox"><canvas id="trW"></canvas></div><p class="note" style="margin-bottom:0">Linea verde = uscite, tratteggiata = previste. Le barre grigie sono quante previsioni sono state verificate.</p></div>
    <h2>Calendario</h2><div class="panel">${calHtml(done)}</div>`:""}
    <h2>Le percentuali sono affidabili?</h2>
    <div class="panel">${cal.length?`<div class="chartbox"><canvas id="trC"></canvas></div><p class="note" style="margin-bottom:0">Per ogni fascia: quanto diceva l'app e quanto è uscito davvero${live?"":" (backtest)"}. Barre simili = percentuali di cui fidarsi.</p>`:'<p class="note">Ancora pochi dati: passa a "Backtest".</p>'}</div>
    ${LG.length&&live?`<h2>Per campionato</h2><div class="panel">${LG.map(r=>`<div class="rk-row"><div class="rk-t"><b>${esc(r.k)}</b><span class="note">${r.n} verificate</span></div><div class="rk-bar"><span class="fill ${dcl(r.d)}" style="width:${r.hit*100}%"></span><span class="mark" style="left:${r.pred*100}%"></span></div><div class="rk-v"><b>${pct(r.hit)}</b>${ptDiff(r.d)}</div></div>`).join("")}</div>`:""}
+   ${slipTrendHtml()}
    <h2>Tu contro il modello</h2><div class="panel">${youVsModel(done)}</div>
    <h2>Il modello impara</h2><div class="panel">
      ${AD.length?`<div class="scroll"><table><tr><th>Mercato</th><th>Verificate</th><th>Previsto</th><th>Uscito</th><th>Correzione</th></tr>${AD.map(([g,a])=>`<tr><td>${esc(g)}</td><td>${a.n}${a.active?"":` <span class="note">/50</span>`}</td><td>${pct(a.pred)}</td><td>${pct(a.hit)}</td><td>${!a.active?'<span class="note">in raccolta</span>':Math.abs(a.k-1)<0.01?"nessuna":a.k<1?`più prudente (×${a.k.toFixed(2)})`:`più decisa (×${a.k.toFixed(2)})`}</td></tr>`).join("")}</table></div>`:'<p class="note">Nessuna previsione verificata ancora.</p>'}
@@ -1803,6 +1812,74 @@ document.querySelectorAll(".filters select,.filters input").forEach(x=>x.addEven
 setInterval(()=>{if(pruneStarted()){setUpdated();render()}},60000);
 // App installabile sul telefono (solo sul sito pubblicato su GitHub Pages)
 if("serviceWorker" in navigator&&location.hostname.endsWith("github.io"))navigator.serviceWorker.register("sw.js").catch(()=>{});
+/* ---------- SCHEDINE A QUOTA ---------- */
+const QKEY2="footstats-quota";
+const SQ={t:(()=>{try{return+localStorage.getItem(QKEY2)||2}catch(e){return 2}})(),mode:"safe",days:3};
+const TARGETS=[1.9,2,2.5,3,3.5,5];
+// margine tipico del bookmaker per tipo di mercato (le quote dei mercati "speciali" sono più tirate)
+const MARGIN={"1X2":.05,DC:.05,GGNG:.06,OUG:.06,GS:.08,MG:.09,MGS:.10,HT:.09};
+const margin=p=>MARGIN[family(p.key)]??.10;
+const estOdds=p=>p.odds?{o:p.odds,real:true}:{o:Math.max(1.01,(1/p.prob)*(1-margin(p))),real:false};
+const qf=o=>o.toFixed(2).replace(".",",");
+function sqLegs(days){const out=[];
+  DATA.fixtures.filter(f=>inL(f.league)&&within(f,days)&&!f.new_team.some(Boolean)).forEach(f=>{const seen=new Set();
+    f.picks.filter(p=>okPick(p)&&p.prob>=.38&&p.prob<=.88&&lift(p)>=-.01).map(p=>({p,G:grade(p)})).filter(x=>x.G.g!=="D")
+      .sort((a,b)=>b.G.s-a.G.s).forEach(({p,G})=>{const fa=family(p.key);if(seen.has(fa)||seen.size>=3)return;seen.add(fa);const e=estOdds(p);out.push({f,p,G,o:e.o,real:e.real})})});
+  return out}
+function buildSlips(target,mode,days){
+  const hi=target*1.18,all=sqLegs(days).filter(x=>x.o>1.08&&x.o<=hi&&(target>=3.5||x.p.prob>=.45));
+  // gruppo di partenza: le giocate che "rendono" di più (probabilità × quota) e le più probabili
+  const eff=x=>x.p.prob*x.o+(mode==="value"?.15*x.G.s:0);
+  const byEff=all.slice().sort((a,b)=>eff(b)-eff(a)).slice(0,30),byProb=all.slice().sort((a,b)=>b.p.prob-a.p.prob).slice(0,12);
+  const L=[...new Set([...byEff,...byProb])].sort((a,b)=>a.o-b.o);
+  const res=[],legs=[],used=new Set();
+  const rec=(start,odds,prob)=>{if(odds>=target){res.push({legs:legs.slice(),odds,prob});return}if(legs.length>=4)return;
+    for(let i=start;i<L.length;i++){const x=L[i];if(used.has(x.f))continue;const no=odds*x.o;if(no>hi)continue;
+      legs.push(x);used.add(x.f);rec(i+1,no,prob*x.p.prob);legs.pop();used.delete(x.f)}};
+  rec(0,1,1);
+  const key=s=>mode==="safe"?s.prob+.02*s.legs.reduce((a,x)=>a+x.G.s,0)/s.legs.length:s.prob*s.odds+.03*s.legs.reduce((a,x)=>a+x.G.s,0)/s.legs.length;
+  res.sort((a,b)=>key(b)-key(a));
+  const out=[];for(const s of res){if(out.every(o=>o.legs.filter(x=>s.legs.includes(x)).length<=1))out.push(s);if(out.length===3)break}
+  return out}
+function slipStats(t){const a=(DATA.slips||[]).filter(s=>Math.abs(s.target-t)<1e-9&&s.won!=null&&!s.void);
+  if(!a.length)return null;const w=a.filter(s=>s.won).length;
+  return{n:a.length,won:w,hit:w/a.length,pred:a.reduce((x,s)=>x+s.prob,0)/a.length,roi:a.reduce((x,s)=>x+(s.won?s.odds-1:-1),0)/a.length,list:a}}
+function slipTrendHtml(){const all=DATA.slips||[];if(!all.length)return"";
+  const rows=TARGETS.map(t=>({t,s:slipStats(t)})).filter(r=>r.s);const pend=all.filter(s=>s.won==null).length;
+  const last=all.filter(s=>s.won!=null&&!s.void).slice(-8).reverse();
+  return`<h2>Schedine a quota</h2><div class="panel">
+    ${rows.length?rows.map(({t,s})=>`<div class="rk-row"><div class="rk-t"><b>Quota ${qf(t)}</b><span class="note">${s.won} vinte su ${s.n}${s.n<15?" · pochi dati":""}</span></div>
+      <div class="rk-bar"><span class="fill ${s.hit>=1/t?"good":s.hit>=s.pred-.05?"mid":"bad"}" style="width:${s.hit*100}%"></span><span class="mark" style="left:${s.pred*100}%"></span><span class="mark be" style="left:${100/t}%" title="pareggio"></span></div>
+      <div class="rk-v"><b>${pct(s.hit)}</b><span class="${s.roi>=0?"pos":"neg"}">${s.roi>=0?"+":"−"}${Math.abs(s.roi*100).toFixed(0)}% resa</span></div></div>`).join("")
+      :`<p class="note">Le schedine proposte ogni mattina vengono registrate e verificate a fine partite: ${pend} in attesa di risultato.</p>`}
+    ${last.length?`<h3>Ultime verificate</h3>${last.map(s=>`<div class="rk-li"><span class="${s.won?"ok":"ko"}">${s.won?"✓":"✗"}</span><span>${qf(s.odds)}</span><span class="rk-m">${s.legs.map(l=>`${esc(l.home)}–${esc(l.away)} ${esc(chipLabel(l))}`).join(" + ")}</span><span>${pct(s.prob)}</span></div>`).join("")}`:""}
+    <p class="note" style="margin-bottom:0">Ogni mattina l'app registra la schedina migliore per ogni quota (1,90 → 5,00) e la verifica da sola. Barra = quante ne escono, trattino = probabilità media prevista, trattino giallo = soglia per andare in pari. La resa è calcolata con la quota stimata: quella vera di Bet365 può cambiarla un po'.</p></div>`}
+function curSlips(){let d=SQ.days,S=buildSlips(SQ.t,SQ.mode,d);if(!S.length&&d===3){d=7;S=buildSlips(SQ.t,SQ.mode,7)}SQ.eff=d;return S}
+function slipsHtml(){
+  const S=curSlips();
+  const seg=(k,opts)=>`<span class="seg wrap" role="group">${opts.map(([v,l])=>`<button aria-pressed="${SQ[k]===v}" data-sq="${k}" data-v="${v}">${l}</button>`).join("")}</span>`;
+  return`<section class="slips"><div class="sl-head"><h2 style="margin:0">🎯 Schedine a quota</h2><span class="note">la quota che vuoi, con la probabilità più alta</span></div>
+   <div class="qchips" role="group" aria-label="Quota obiettivo">${TARGETS.map(t=>`<button class="qchip" aria-pressed="${SQ.t===t}" data-qt="${t}">${qf(t)}</button>`).join("")}</div>
+   ${(()=>{const st=slipStats(SQ.t);return st?`<p class="note" style="margin:-4px 0 8px">Storico quota ${qf(SQ.t)}: <b>${st.won} vinte su ${st.n}</b> (${pct(st.hit)}, previste ${pct(st.pred)}) · resa <b class="${st.roi>=0?"pos":"neg"}">${st.roi>=0?"+":"−"}${Math.abs(st.roi*100).toFixed(0)}%</b></p>`:""})()}
+   <div class="row toolbar">${seg("mode",[["safe","Più sicure"],["value","Più valore"]])}${seg("days",[[3,"3 giorni"],[7,"7 giorni"]])}</div>
+   ${SQ.eff!==SQ.days&&S.length?'<p class="note" style="margin:-4px 0 8px">Nei prossimi 3 giorni non ci sono partite adatte: ti mostro i prossimi 7.</p>':""}
+   ${S.length?S.map((s,i)=>{const ev=s.prob*s.odds-1,real=s.legs.every(x=>x.real);return`<div class="slip ${i===0?"best":""}">
+      <div class="sl-top"><div>${ring(s.prob,true)}</div><div class="sl-q"><span class="note">${i===0?"La migliore":"Alternativa "+i} · ${s.legs.length===1?"singola":s.legs.length+" eventi"}</span>
+        <b class="cnt">${qf(s.odds)}</b><span class="note">quota ${real?"dei bookmaker":"stimata Bet365"} · quota giusta ${qf(1/s.prob)}</span></div>
+        <div class="sl-ev ${ev>=0?"pos":""}">${ev>=0?`<b>+${(ev*100).toFixed(0)}%</b><span>valore</span>`:`<b>${Math.round(s.prob*10)} su 10</b><span>vinte in media</span>`}</div></div>
+      ${s.legs.map(x=>`<div class="mleg"><span class="pill">${pct(x.p.prob)}</span><div style="flex:1;min-width:0"><b>${chipLabel(x.p)}</b> ${gradeBadge(x.f,x.p)}<div class="note">${esc(x.f.home)}–${esc(x.f.away)} · ${dShort(x.f)} ${esc(x.f.time||"")}</div></div><span class="sl-o">${x.real?"":"~"}${qf(x.o)}</span></div>`).join("")}
+      <div class="row" style="gap:6px;margin-top:8px"><button class="playbtn addm" data-sqs="${i}">Metti in schedina</button><button class="playbtn" data-sqp="${i}">+ La gioco</button></div></div>`}).join("")
+     :`<p class="empty">Nessuna combinazione arriva a quota ${qf(SQ.t)} con le partite ${SQ.days===3?"dei prossimi 3 giorni: prova 7 giorni":"in calendario"}.</p>`}
+   <p class="note">Sceglie fino a 4 eventi di partite diverse, solo giocate con pagella A–C, e tiene la quota tra ${qf(SQ.t)} e ${qf(SQ.t*1.18)}. La quota "~" è stimata: quota giusta del modello meno il margine tipico del bookmaker (5–10%). Su Bet365 controlla la quota vera: se è più alta, meglio. Per guadagnare nel tempo con quota ${qf(SQ.t)} devi vincere più di ${Math.round(100/SQ.t)} volte su 100.</p></section>`}
+function wireSlips(el){const S=curSlips();
+  el.querySelectorAll("[data-qt]").forEach(b=>b.addEventListener("click",()=>{SQ.t=+b.dataset.qt;try{localStorage.setItem(QKEY2,SQ.t)}catch(e){}rerenderSlips(el)}));
+  el.querySelectorAll("[data-sq]").forEach(b=>b.addEventListener("click",()=>{const k=b.dataset.sq;SQ[k]=k==="days"?+b.dataset.v:b.dataset.v;rerenderSlips(el)}));
+  el.querySelectorAll("[data-sqs]").forEach(b=>b.addEventListener("click",()=>{const s=S[+b.dataset.sqs];saveSched(s.legs.map(x=>legOf(x.f,chipLabel(x.p),x.p.prob,DATA.mdefs[x.p.key])));schedSheet()}));
+  el.querySelectorAll("[data-sqp]").forEach(b=>b.addEventListener("click",()=>{const s=S[+b.dataset.sqp],first=s.legs.map(x=>x.f.date).sort()[0];
+    quickAdd({date:first,home:"Schedina",away:`quota ${qf(s.odds)}`,league:"Schedina a quota"},{key:"multi",group:"Multipla",label:`Schedina ${qf(SQ.t)}: `+s.legs.map(x=>`${x.f.home}–${x.f.away} ${chipLabel(x.p)}`).join(" + "),
+      prob:s.prob,fair_odds:1/s.prob,odds:null,legs:s.legs.map(x=>({home:x.f.home,away:x.f.away,date:x.f.date,def:DATA.mdefs[x.p.key],label:chipLabel(x.p)}))})}))}
+function rerenderSlips(){const sec=document.querySelector("section.slips");if(!sec)return;const tmp=document.createElement("div");tmp.innerHTML=slipsHtml();const n=tmp.firstElementChild;sec.replaceWith(n);
+  wireSlips(n);animateCounts(n)}
 /* ---------- GRAFICA: BADGE, CAMPO 3D, PODIO, ANIMAZIONI ---------- */
 const STOPW=new Set(["fc","ac","as","us","sc","cf","afc","the","de","la","le","real","club"]);
 function initials(n){const w=String(n).replace(/[^\p{L}\p{N} ]/gu," ").split(/\s+/).filter(Boolean),k=w.filter(x=>!STOPW.has(x.toLowerCase()));
@@ -1842,7 +1919,7 @@ function podiumHtml(rows){if(rows.length<3)return"";const[a,b,c]=rows;
   return`<div class="podium" aria-label="I 3 mercati più azzeccati">${pod(b,"p2",2)}${pod(a,"p1",1)}${pod(c,"p3",3)}</div>`}
 function animateCounts(root){if(matchMedia("(prefers-reduced-motion: reduce)").matches)return;
   root.querySelectorAll(".cnt").forEach(el=>{const m=el.textContent.match(/-?\d+(?:[.,]\d+)?/);if(!m)return;const end=parseFloat(m[0].replace(",",".")),dec=(m[0].split(/[.,]/)[1]||"").length,t0=performance.now(),txt=el.textContent;
-    const step=t=>{const k=Math.min(1,(t-t0)/800),v=end*(1-Math.pow(1-k,3));el.textContent=txt.replace(m[0],v.toFixed(dec));if(k<1)requestAnimationFrame(step)};requestAnimationFrame(step)})}
+    const step=t=>{const k=Math.min(1,(t-t0)/800),v=end*(1-Math.pow(1-k,3));el.textContent=txt.replace(m[0],m[0].includes(",")?v.toFixed(dec).replace(".",","):v.toFixed(dec));if(k<1)requestAnimationFrame(step)};requestAnimationFrame(step)})}
 function wireTilt(root){root.querySelectorAll(".tiltw").forEach(w=>{const f=w.querySelector(".flip");
   w.addEventListener("pointermove",e=>{if(e.pointerType!=="mouse")return;const r=w.getBoundingClientRect(),x=(e.clientX-r.left)/r.width,y=(e.clientY-r.top)/r.height;
     f.style.setProperty("--ry",((x-.5)*8).toFixed(2)+"deg");f.style.setProperty("--rx",((.5-y)*6).toFixed(2)+"deg");f.style.setProperty("--mx",x*100+"%");f.style.setProperty("--my",y*100+"%")});
