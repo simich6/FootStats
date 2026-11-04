@@ -146,12 +146,27 @@ def signals(preds: list[dict], days: int = 3, n: int = 8) -> list[tuple[float, s
     return chosen
 
 
-def daily_message(preds, mdefs) -> str | None:
+def slip_lines(slips: list[dict] | None) -> list[str]:
+    e = html.escape
+    out = []
+    for t in config.SLIP_TELEGRAM:
+        s = next((x for x in slips or [] if abs(x["target"] - t) < 1e-9), None)
+        if not s:
+            continue
+        q = f"{s['odds']:.2f}".replace(".", ",")
+        out.append(f"<b>Quota ~{q}</b> · probabilità {s['prob'] * 100:.0f}%")
+        for leg in s["legs"]:
+            out.append(f"   • {e(leg['home'])}–{e(leg['away'])} ({leg['date'][8:]}/{leg['date'][5:7]}): {e(_label(leg))} ~{leg['odds']:.2f}")
+    return out
+
+
+def daily_message(preds, mdefs, slips=None) -> str | None:
     picks, when = best_picks(preds, mdefs, days=3), "dei prossimi 3 giorni"
     if not picks:
         picks, when = best_picks(preds, mdefs, days=7), "della settimana"
     sig = signals(preds)
-    if not picks and not sig:
+    sl = slip_lines(slips)
+    if not picks and not sig and not sl:
         return None
     e = html.escape
     lines = [f"⚽ <b>Footstats – giocate da partita {when}</b>", ""]
@@ -161,6 +176,8 @@ def daily_message(preds, mdefs) -> str | None:
         lines.append(f"   media campionato {p['base']*100:.0f}% (+{lift*100:.0f} punti)")
     if sig:
         lines += ["", "<b>Segnali sui tuoi mercati</b>"] + [t for _, t in sig]
+    if sl:
+        lines += ["", "🎯 <b>Schedine del giorno</b>"] + sl
     lines += ["", "Gioca solo se la quota del bookmaker supera la quota giusta."]
     if _app_url():
         lines.append(f'<a href="{_app_url()}">Apri Footstats</a>')
@@ -193,7 +210,7 @@ def weekly_message(history: list[dict], adapt: dict) -> str | None:
     return "\n".join(lines)
 
 
-def send(preds: list[dict], mdefs: dict, history: list[dict], adapt: dict) -> None:
+def send(preds: list[dict], mdefs: dict, history: list[dict], adapt: dict, slips: list | None = None) -> None:
     token = os.environ.get("TELEGRAM_TOKEN", "").strip()
     if not token:
         print("  telegram: nessun token, salto")
@@ -206,7 +223,7 @@ def send(preds: list[dict], mdefs: dict, history: list[dict], adapt: dict) -> No
         return
     today = str(date.today())
     msgs = []
-    if st.get("daily") != today and (m := daily_message(preds, mdefs)):
+    if st.get("daily") != today and (m := daily_message(preds, mdefs, slips)):
         msgs.append(("daily", m))
     if date.today().weekday() == 0 and st.get("weekly") != today and (m := weekly_message(history, adapt)):
         msgs.append(("weekly", m))

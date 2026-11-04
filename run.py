@@ -72,13 +72,22 @@ def main():
     history.save(hist)
     done = [h for h in hist if h["won"] is not None]
     print(f"    storico: {len(hist)} previsioni, {len(done)} verificate")
+    import schedine
+    today_slips, slips = [], []
+    try:  # schedine a quota: proposte del giorno e verifica di quelle passate
+        today_slips = schedine.propose(preds, hist, bt is not None)
+        slips = schedine.update(schedine.load(), today_slips, matches)
+        schedine.save(slips)
+        print(f"    schedine a quota: {len(today_slips)} proposte oggi, {sum(1 for s in slips if s.get('won') is not None)} verificate")
+    except Exception as ex:
+        print(f"  ! schedine: errore ({ex})")
     import report
     path = report.build(preds, trends, leagues, bt, history=hist, adapt=adapt,
                         results=history.recent_results(matches), mdefs=history.market_defs(),
-                        ratings=predict.export_ratings(matches))
+                        ratings=predict.export_ratings(matches), slips=slips)
     try:
         import notify
-        notify.send(preds, history.market_defs(), hist, adapt)
+        notify.send(preds, history.market_defs(), hist, adapt, today_slips)
     except Exception as ex:  # le notifiche non devono mai bloccare l'aggiornamento
         print(f"  ! telegram: errore ({ex})")
     print(f"\nFatto. Apri {path} nel browser.")

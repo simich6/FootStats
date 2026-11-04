@@ -41,6 +41,7 @@ PARAMS_VERSION = 5       # se cambia, la taratura viene rifatta automaticamente
 
 # Backtest e valore
 BACKTEST_SEASONS = 3     # ultime stagioni simulate (walk-forward)
+SLIP_TELEGRAM = [2.0, 3.0]  # quote delle "schedine del giorno" mandate su Telegram
 MIN_EDGE = 0.03          # vantaggio minimo (3 punti %) per contare una giocata "di valore"
 
 
