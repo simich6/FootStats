@@ -334,6 +334,7 @@ nav#nav1 button[aria-selected=true] svg{transform:translateY(-1px) scale(1.08);f
 .flip>.face{grid-area:1/1;backface-visibility:hidden;-webkit-backface-visibility:hidden;margin:0;position:relative;overflow:hidden}
 .flip>.face.back{transform:rotateY(180deg);position:absolute;inset:0;overflow:auto}
 .flip>.face::after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(260px circle at var(--mx,30%) var(--my,0%),rgba(255,255,255,.10),transparent 60%)}
+.fcol{min-width:0}.fgrid{display:grid;grid-template-columns:1fr auto auto;gap:3px 10px;font-size:.88rem;align-items:baseline}.fgrid b{font:700 1rem "Barlow Condensed",sans-serif;text-align:right}.fgrid .note{text-align:right;font-size:.78rem}
 .fbtn{flex:none;margin-left:auto;align-self:flex-start;z-index:2;border:1px solid var(--line);background:var(--surface2);color:var(--muted);border-radius:10px;font:600 .78rem "Source Sans 3",sans-serif;padding:3px 9px;cursor:pointer}
 .back h3{margin-top:2px}.back .pb{margin:4px 0!important}.back .pb-l{font-size:.82rem}
 .tc-teams{overflow-wrap:anywhere}
@@ -600,7 +601,7 @@ function renderFind(){
   const el=$("find"),now=Date.now(),lim=now+GS.days*864e5;
   if(GS.type==="esito"&&(GS.stat!=="goals"||GS.scope!=="total"))GS.type="over";
   const def=defFrom(GS);
-  const rows=DATA.fixtures.filter(f=>inL(f.league)&&kickoff(f)<lim).map(f=>{const r=probFor(f,def);return r?{f,...r}:null}).filter(Boolean);
+  const rows=DATA.fixtures.filter(f=>inL(f.league)&&!f.exp&&kickoff(f)<lim).map(f=>{const r=probFor(f,def);return r?{f,...r}:null}).filter(Boolean);
   rows.sort((a,b)=>b.prob-a.prob);
   const shown=rows.filter(r=>r.prob*100>=GS.min);
   const seg=(k,opts)=>`<span class="seg wrap" role="group">${opts.map(([v,l])=>`<button aria-pressed="${GS[k]===v}" data-gs="${k}" data-v="${v}">${l}</button>`).join("")}</span>`;
@@ -630,7 +631,7 @@ function renderFind(){
 const MU={k:3,band:"60-80",days:7,sort:"prob"};
 function legsFor(lg){const now=new Date();now.setHours(0,0,0,0);const lim=new Date(now);lim.setDate(lim.getDate()+MU.days);
   const[lo,hi]=MU.band.split("-").map(x=>+x/100),hasBt=!!DATA.backtest;
-  return DATA.fixtures.filter(f=>f.league===lg&&!f.new_team.some(Boolean)&&new Date(f.date+"T12:00")>=now&&new Date(f.date+"T12:00")<lim).map(f=>{
+  return DATA.fixtures.filter(f=>f.league===lg&&!f.new_team.some(Boolean)&&!f.exp&&new Date(f.date+"T12:00")>=now&&new Date(f.date+"T12:00")<lim).map(f=>{
     const p=f.picks.filter(p=>avail(p)&&(!hasBt||p.reliability!=="red")&&p.prob>=lo&&p.prob<=hi).sort((a,b)=>b.prob-a.prob)[0];return p?{f,p}:null}).filter(Boolean)
     .sort((a,b)=>b.p.prob-a.p.prob).slice(0,9)}
 function combos(arr,k){const out=[],rec=(st,acc)=>{if(acc.length===k){out.push(acc.slice());return}for(let i=st;i<arr.length;i++){acc.push(arr[i]);rec(i+1,acc);acc.pop()}};rec(0,[]);return out}
@@ -682,7 +683,7 @@ function ring(prob,main){const r=26,c=2*Math.PI*r;
 function renderTop(){
   const el=$("top"),F=filters(),now=new Date();now.setHours(0,0,0,0);const lim=new Date(now);lim.setDate(lim.getDate()+TOP.days);
   const hasBt=!!DATA.backtest,mine=myMarkets();
-  const cards=DATA.fixtures.filter(f=>(inL(f.league))&&new Date(f.date+"T12:00")<lim&&!f.new_team.some(Boolean)).map(f=>{
+  const cards=DATA.fixtures.filter(f=>(inL(f.league))&&new Date(f.date+"T12:00")<lim&&!f.new_team.some(Boolean)&&!f.exp).map(f=>{
     const ok=f.picks.filter(p=>avail(p)&&(!hasBt||p.reliability!=="red")&&p.prob>=bandRange()[0]&&p.prob<=bandRange()[1]&&(!TOP.mine||mine.has(p.group))&&(TOP.sort!=="lift"||lift(p)>0.02)).sort((a,b)=>score(b)-score(a));
     if(!ok.length)return null;
     const chosen=[],fams=new Set();
@@ -771,7 +772,7 @@ ${last}
 Giocate più probabili secondo il modello:
 ${top}
 
-${f.rivalry?`È un derby/rivalità: ${f.rivalry.name}.\n`:""}${f.h2h?.n?`Ultimi ${f.h2h.n} scontri diretti, medie: gol ${f.h2h.avg.goals??"–"}, tiri in porta ${f.h2h.avg.sot??"–"}, cartellini ${f.h2h.avg.cards??"–"}, falli ${f.h2h.avg.fouls??"–"}.\n`:""}
+${f.rivalry?`È un derby/rivalità: ${f.rivalry.name}.\n`:""}${f.exp?`Partita di ${f.league} (stima sperimentale: squadre valutate con i dati dei loro campionati, ${f.leagues?.[0]||"campionato non coperto"} e ${f.leagues?.[1]||"campionato non coperto"}).\n`:""}${(f.form||[]).map((x,i)=>x?`Forma ${i?f.away:f.home}: ultime ${x.seq.length} ${x.seq}, ${x.ppg} punti a partita (stagione ${x.ppg_s}), gol ${x.gf}-${x.ga} a partita, ${x.rest} giorni di riposo, ${x.busy} partite in 14 giorni.\n`:"").join("")}${f.h2h?.n?`Ultimi ${f.h2h.n} scontri diretti, medie: gol ${f.h2h.avg.goals??"–"}, tiri in porta ${f.h2h.avg.sot??"–"}, cartellini ${f.h2h.avg.cards??"–"}, falli ${f.h2h.avg.fouls??"–"}.\n`:""}
 La mia domanda: ${question||"…"}
 
 Cerca online le formazioni probabili, gli assenti e le statistiche stagionali dei giocatori coinvolti (tiri, tiri in porta, minuti, falli fatti e subiti). Combinale con i dati del modello qui sopra e dimmi una probabilità stimata, la quota minima per giocarla e quanto sei sicuro, spiegando in breve.`}
@@ -1180,7 +1181,7 @@ function saveQ(q){try{localStorage.setItem(QKEY,JSON.stringify(q))}catch(e){}}
 function renderValue(){
   const el=$("value"),F=filters(),Q=loadQ(),hasBt=!!DATA.backtest,today=new Date();today.setHours(0,0,0,0);
   const rows=[];
-  DATA.fixtures.filter(f=>(inL(f.league))&&!f.new_team.some(Boolean)&&new Date(f.date+"T23:59")>=today).forEach(f=>f.picks.forEach(p=>{
+  DATA.fixtures.filter(f=>(inL(f.league))&&!f.new_team.some(Boolean)&&!f.exp&&new Date(f.date+"T23:59")>=today).forEach(f=>f.picks.forEach(p=>{
     if(!avail(p)||p.prob<0.4||p.prob>0.8||(hasBt&&p.reliability==="red")||(F.group&&p.group!==F.group))return;
     const o=Q[pid(f,p)]??p.odds??null;rows.push({f,p,o,mine:Q[pid(f,p)]!=null})}));
   const calc=r=>r.o>1?{imp:1/r.o,edge:r.p.prob-1/r.o,ev:r.p.prob*r.o-1}:null;
@@ -1409,7 +1410,7 @@ const dShort=f=>new Date(f.date+"T12:00").toLocaleDateString("it-IT",{weekday:"s
 const okPick=p=>avail(p)&&(!DATA.backtest||p.reliability!=="red");
 const hscore=p=>lift(p)+0.25*(p.prob-0.5);  // un po' di "interessante" (scarto dalla media) e un po' di probabilità
 function within(f,days){const now=new Date();now.setHours(0,0,0,0);const lim=new Date(now);lim.setDate(lim.getDate()+days);return new Date(f.date+"T12:00")<lim}
-const LORDER=["Serie A","Premier League","La Liga","Bundesliga","Ligue 1","Serie B","Championship","Segunda División","2. Bundesliga","Ligue 2"];
+const LORDER=["Serie A","Premier League","La Liga","Bundesliga","Ligue 1","Champions League","Europa League","Conference League","Serie B","Championship","Segunda División","2. Bundesliga","Ligue 2"];
 function leaguesWithFx(){const n={};DATA.fixtures.forEach(f=>n[f.league]=(n[f.league]||0)+1);
   const o=l=>{const i=LORDER.indexOf(l);return i<0?99:i};return Object.keys(n).sort((a,b)=>o(a)-o(b)).map(l=>[l,n[l]])}
 function fxOf(lg){return DATA.fixtures.filter(f=>f.league===lg).sort((a,b)=>kickoff(a)-kickoff(b))}
@@ -1435,11 +1436,11 @@ function goMatch(f){PT.league=f.league;PT.fid=fid(f);goTab("match")}
 /* ---------- HOME ---------- */
 const HOME={n:3,days:7,q:"",multi:false,find:false};
 function homePicks(days){
-  return DATA.fixtures.filter(f=>inL(f.league)&&within(f,days)&&!f.new_team.some(Boolean)).map(f=>{
+  return DATA.fixtures.filter(f=>inL(f.league)&&within(f,days)&&!f.new_team.some(Boolean)&&!f.exp).map(f=>{
     const p=f.picks.filter(p=>okPick(p)&&p.prob>=.40&&p.prob<=.75&&lift(p)>0.02).sort((a,b)=>hscore(b)-hscore(a))[0];return p?{f,p}:null})
    .filter(Boolean).sort((a,b)=>hscore(b.p)-hscore(a.p))}
 function homeLegs(days){
-  return DATA.fixtures.filter(f=>inL(f.league)&&within(f,days)&&!f.new_team.some(Boolean)).map(f=>{
+  return DATA.fixtures.filter(f=>inL(f.league)&&within(f,days)&&!f.new_team.some(Boolean)&&!f.exp).map(f=>{
     const p=f.picks.filter(p=>okPick(p)&&p.prob>=.60&&p.prob<=.85&&lift(p)>=0).sort((a,b)=>b.prob-a.prob)[0];return p?{f,p}:null})
    .filter(Boolean).sort((a,b)=>b.p.prob-a.p.prob)}
 function renderHome(){
@@ -1637,12 +1638,13 @@ function renderMatch(){
   const head=`<div class="mstick"><div class="mhead2">${tbadge(f.home,44)}<div class="mh-t"><div class="vs"><b>${esc(f.home)}</b><span>vs</span><b>${esc(f.away)}</b></div>
       <div class="mh-m">${esc(f.league)} · ${dShort(f)} ${esc(f.time||"")}${f.big?' · <span class="bigm" style="margin:0">Big match</span>':""}${f.rivalry?` · <span class="bigm hot" style="margin:0">${esc(f.rivalry.name)}</span>`:""}</div></div>${tbadge(f.away,44)}</div>
     <div class="subtabs" role="tablist">${SUB.map(([k,l])=>`<button role="tab" aria-pressed="${PT.sub===k}" data-sub="${k}">${l}</button>`).join("")}</div></div>`;
-  const sum=`<div class="panel"><div class="row" style="justify-content:space-between"><span>${miniForm(f.home)}</span><span class="note">ultime 5</span><span>${miniForm(f.away)}</span></div>
+  const sum=`${cupHtml(f)}<div class="panel"><div class="row" style="justify-content:space-between"><span>${miniForm(f.home)}</span><span class="note">ultime 5</span><span>${miniForm(f.away)}</span></div>
       <div class="bar" role="img" aria-label="1 ${pct(h)}, X ${pct(d)}, 2 ${pct(a)}"><span class="h" style="flex:${h*100}">1 ${pct(h)}</span><span class="d" style="flex:${d*100}">X ${pct(d)}</span><span class="x" style="flex:${a*100}">2 ${pct(a)}</span></div>
       <p class="note" style="margin:8px 0 0;text-align:center">Gol attesi <b>${eg?eg[0].toFixed(1)+" – "+eg[1].toFixed(1):"–"}</b>${top?` · risultato più probabile <b>${top[0]}-${top[1]}</b> (${(top[2]*100).toFixed(0)}%)`:""}${f.new_team.some(Boolean)?" · ⚠ una squadra senza storico nel campionato: stime meno affidabili":""}</p>
       ${f.absent&&f.absent.some(a=>a.length)?`<div class="absent">${[0,1].map(k=>f.absent[k].length?`<div><b>Assenti ${esc(k?f.away:f.home)}:</b> ${f.absent[k].map(p=>`${esc(p.n)}${p.type&&/questionable/i.test(p.type)?" (in dubbio)":""}`).join(", ")}</div>`:"").join("")}</div>`:""}</div>
     ${pitch3d(f)}
-    <h2>Le migliori per questa partita</h2>
+    ${formHtml(f)}
+    <h2 style="margin-top:20px">Le migliori per questa partita</h2>
     ${best.length?`<div class="panel">${best.map((p,i)=>`<div class="tp" style="border-top:${i?"1px solid var(--line)":"0"}">${ring(p.prob,i===0)}<div><div class="tp-l">${chipLabel(p)} ${gradeBadge(f,p)}</div>${liftHtml(p)}<div class="tp-w">${why(f,p)}</div>${oddsLine(p)}${pickBtns(f,p,false)}</div></div>`).join("")}</div>`
       :'<p class="note">Nessuna giocata si discosta abbastanza dalla media del campionato: partita "normale". Guarda la linguetta Giocate.</p>'}
     <h2 style="margin-top:20px">Partite simili</h2>${simHtml(f,best)}`;
@@ -1788,7 +1790,7 @@ function formStrip(){const t=formTable(21,6);if(t.length<2)return"";
   return`<div class="panel"><h2 style="margin-bottom:2px">Mercati in forma</h2><p class="note" style="margin:0 0 8px">Ultime 3 settimane: quanto escono rispetto a quanto previsto.</p>
     <div class="row" style="gap:6px">${up.map(r=>chip(r,"🔥")).join("")}${down.map(r=>chip(r,"❄")).join("")}</div></div>`}
 function valueStrip(){const now=Date.now(),lim=now+3*864e5,out=[];
-  DATA.fixtures.filter(f=>inL(f.league)&&kickoff(f)<lim&&!f.new_team.some(Boolean)).forEach(f=>f.picks.forEach(p=>{if(p.edge!=null&&p.edge>=.03&&p.prob>=.35&&p.prob<=.8&&okPick(p))out.push({f,p})}));
+  DATA.fixtures.filter(f=>inL(f.league)&&kickoff(f)<lim&&!f.new_team.some(Boolean)&&!f.exp).forEach(f=>f.picks.forEach(p=>{if(p.edge!=null&&p.edge>=.03&&p.prob>=.35&&p.prob<=.8&&okPick(p))out.push({f,p})}));
   out.sort((a,b)=>b.p.edge-a.p.edge);if(!out.length)return"";
   return`<h2 style="margin-top:22px">Quote con valore</h2>${out.slice(0,3).map(({f,p})=>`<div class="mrow"><span class="pill">${pct(p.prob)}</span><div class="mrow-t"><b>${chipLabel(p)}</b> ${gradeBadge(f,p)}
       <div class="note">${esc(f.home)}–${esc(f.away)} · ${dShort(f)} ${esc(f.time||"")} · quota ${p.nbook?"media ":""}<b>${p.odds.toFixed(2)}</b>${p.best?` (migliore ${p.best.toFixed(2)})`:""} contro giusta ${p.fair_odds.toFixed(2)} · <span class="pos">+${(p.edge*100).toFixed(1)} pt</span></div></div><div class="mrow-a">${pickBtns(f,p,true)}</div></div>`).join("")}
@@ -1822,7 +1824,7 @@ const margin=p=>MARGIN[family(p.key)]??.10;
 const estOdds=p=>p.odds?{o:p.odds,real:true}:{o:Math.max(1.01,(1/p.prob)*(1-margin(p))),real:false};
 const qf=o=>o.toFixed(2).replace(".",",");
 function sqLegs(days){const out=[];
-  DATA.fixtures.filter(f=>inL(f.league)&&within(f,days)&&!f.new_team.some(Boolean)).forEach(f=>{const seen=new Set();
+  DATA.fixtures.filter(f=>inL(f.league)&&within(f,days)&&!f.new_team.some(Boolean)&&!f.exp).forEach(f=>{const seen=new Set();
     f.picks.filter(p=>okPick(p)&&p.prob>=.38&&p.prob<=.88&&lift(p)>=-.01).map(p=>({p,G:grade(p)})).filter(x=>x.G.g!=="D")
       .sort((a,b)=>b.G.s-a.G.s).forEach(({p,G})=>{const fa=family(p.key);if(seen.has(fa)||seen.size>=3)return;seen.add(fa);const e=estOdds(p);out.push({f,p,G,o:e.o,real:e.real})})});
   return out}
@@ -1854,6 +1856,29 @@ function slipTrendHtml(){const all=DATA.slips||[];if(!all.length)return"";
       :`<p class="note">Le schedine proposte ogni mattina vengono registrate e verificate a fine partite: ${pend} in attesa di risultato.</p>`}
     ${last.length?`<h3>Ultime verificate</h3>${last.map(s=>`<div class="rk-li"><span class="${s.won?"ok":"ko"}">${s.won?"✓":"✗"}</span><span>${qf(s.odds)}</span><span class="rk-m">${s.legs.map(l=>`${esc(l.home)}–${esc(l.away)} ${esc(chipLabel(l))}`).join(" + ")}</span><span>${pct(s.prob)}</span></div>`).join("")}`:""}
     <p class="note" style="margin-bottom:0">Ogni mattina l'app registra la schedina migliore per ogni quota (1,90 → 5,00) e la verifica da sola. Barra = quante ne escono, trattino = probabilità media prevista, trattino giallo = soglia per andare in pari. La resa è calcolata con la quota stimata: quella vera di Bet365 può cambiarla un po'.</p></div>`}
+/* ---------- STATO DI FORMA E COPPE ---------- */
+function formHtml(f){const F=f.form;if(!F||!F.some(Boolean))return"";
+  const arrow=(a,b,good=true)=>a==null||b==null?"":Math.abs(a-b)<.15*Math.max(1,Math.abs(b))?"":(a>b)===good?'<span class="pos">▲</span>':'<span class="neg">▼</span>';
+  const col=(t,x)=>{if(!x)return`<div class="fcol"><b>${esc(t)}</b><p class="note">Nessuna partita recente nei dati.</p></div>`;
+    const tag=x.trend==="su"?["In forma","hi"]:x.trend==="giu"?["In calo","lo"]:["Stabile","mid"];
+    const warn=[];if(x.rest<=3)warn.push(`solo ${x.rest} giorni di riposo${x.cup_last?" (dopo una partita di coppa)":""}`);if(x.busy>=4)warn.push(`${x.busy} partite negli ultimi 14 giorni`);
+    return`<div class="fcol"><div class="row" style="gap:8px;flex-wrap:nowrap">${tbadge(t,30)}<b style="min-width:0">${esc(t)}</b><span class="tag ${tag[1]}" style="margin-left:auto">${tag[0]}</span></div>
+      <div class="form" style="margin:8px 0">${x.seq.split("").map(r=>`<span class="${r}">${r}</span>`).join("")}</div>
+      <div class="fgrid"><span>Punti a partita</span><b>${x.ppg.toFixed(1)} ${arrow(x.ppg,x.ppg_s)}</b><span class="note">stagione ${x.ppg_s.toFixed(1)}</span>
+       <span>Gol fatti</span><b>${x.gf.toFixed(1)} ${arrow(x.gf,x.gf_s)}</b><span class="note">${x.gf_s.toFixed(1)}</span>
+       <span>Gol subiti</span><b>${x.ga.toFixed(1)} ${arrow(x.ga,x.ga_s,false)}</b><span class="note">${x.ga_s.toFixed(1)}</span>
+       ${x.sf!=null?`<span>Tiri in porta</span><b>${x.sf.toFixed(1)} ${arrow(x.sf,x.sf_s)}</b><span class="note">${x.sf_s.toFixed(1)}</span>`:""}
+       ${x.sa!=null?`<span>Tiri in porta subiti</span><b>${x.sa.toFixed(1)} ${arrow(x.sa,x.sa_s,false)}</b><span class="note">${x.sa_s.toFixed(1)}</span>`:""}
+       <span>Riposo</span><b>${x.rest} giorni</b><span class="note">${x.busy===1?"1 partita":x.busy+" partite"} in 14 gg</span></div>
+      ${warn.length?`<p class="note" style="margin:6px 0 0;color:var(--value)">⚠ ${warn.join(" · ")}</p>`:""}</div>`};
+  return`<h2 style="margin-top:20px">Stato di forma</h2><div class="panel"><div class="grid2">${col(f.home,F[0])}${col(f.away,F[1])}</div>
+    <p class="note" style="margin-bottom:0">Ultime 6 partite di campionato contro la media della stagione. ▲/▼ = meglio/peggio del solito. Il modello dà già più peso alle partite recenti: questo riquadro serve a capire il momento. Per infortuni e squalifiche usa 💬 Chiedi a Claude.</p></div>`}
+function cupHtml(f){if(!f.exp)return"";
+  const lim=f.limited?.map((x,i)=>x?(i?f.away:f.home):null).filter(Boolean)||[];
+  const path=(t,a)=>a&&a.length?a.map(r=>{const home=r.home===t,gf=home?r.hg:r.ag,ga=home?r.ag:r.hg,res=gf>ga?"V":gf===ga?"N":"P";
+      return`<div class="rk-li" style="grid-template-columns:1.6em 3.2em minmax(0,1fr) auto"><span class="form"><span class="${res}" style="width:20px;height:20px">${res}</span></span><span>${r.date.slice(8)}/${r.date.slice(5,7)}</span><span class="rk-m">${home?"vs":"@"} ${esc(home?r.away:r.home)}</span><b>${gf}-${ga}</b></div>`}).join(""):'<p class="note">Nessuna partita giocata nel torneo (o dati non disponibili).</p>';
+  return`<div class="tip warn"><span class="ti">β</span><div><b>Partita di coppa: stima sperimentale.</b> Le squadre sono valutate con i dati del loro campionato (${esc(f.leagues?.[0]||"campionato non coperto")} · forza ${f.strength?.[0]?.toFixed(2)} / ${esc(f.leagues?.[1]||"campionato non coperto")} · forza ${f.strength?.[1]?.toFixed(2)}, dove 1 = Ligue 1). Non è verificata nel backtest e non entra in storico e schedine.${lim.length?` <b>Dati limitati per ${lim.map(esc).join(" e ")}</b>: campionato non coperto, stima prudente.`:""}</div></div>
+   ${f.path&&(f.path[0]?.length||f.path[1]?.length)?`<h2 style="margin-top:16px">Percorso in ${esc(f.league)}${f.stage?` <span class="note">· ${esc(f.stage)}</span>`:""}</h2><div class="panel"><div class="grid2"><div><b>${esc(f.home)}</b>${path(f.home,f.path[0])}</div><div><b>${esc(f.away)}</b>${path(f.away,f.path[1])}</div></div></div>`:""}`}
 function curSlips(){let d=SQ.days,S=buildSlips(SQ.t,SQ.mode,d);if(!S.length&&d===3){d=7;S=buildSlips(SQ.t,SQ.mode,7)}SQ.eff=d;return S}
 function slipsHtml(){
   const S=curSlips();
