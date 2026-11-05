@@ -5,6 +5,8 @@
     python run.py --tune       tara il modello sui dati (circa 10 minuti, poi rifà il backtest)
 """
 import argparse
+
+import pandas as pd
 import json
 
 import backtest
@@ -26,6 +28,8 @@ def main():
     if not args.offline:
         print("1/4 Download dati")
         provider.sync()
+        import data as _data
+        _data.download_support()
     print("2/4 Database")
     matches = provider.matches()
     print(f"    {len(matches)} partite, {matches['date'].min().date()} → {matches['date'].max().date()}")
@@ -59,7 +63,26 @@ def main():
             giocatori.attach(preds, giocatori.update(fixtures, matches))
         except Exception as ex:
             print(f"  ! giocatori: errore ({ex})")
+    # coppe europee (sperimentale) e stato di forma delle squadre
+    import data as _data
+    import europa
+    import forma
+    support = _data.build_support()
+    euro = {"fixtures": [], "results": [], "ratings": {}, "trend_teams": set()}
+    if not args.offline:
+        try:
+            euro = europa.update(matches, support, bt)
+        except Exception as ex:
+            print(f"  ! coppe: errore ({ex})")
+    preds += euro["fixtures"]
+    games = pd.concat([matches, support], ignore_index=True) if not support.empty else matches
+    try:
+        forma.attach(preds, games, euro["results"])
+    except Exception as ex:
+        print(f"  ! forma: errore ({ex})")
     trends = predict.team_trends(matches)
+    if not support.empty and euro["trend_teams"]:
+        trends.update(predict.team_trends(support, only=euro["trend_teams"]))
     leagues = predict.league_trends(matches)
     (config.OUTPUT_DIR).mkdir(exist_ok=True)
     past = history.load()
@@ -84,7 +107,7 @@ def main():
     import report
     path = report.build(preds, trends, leagues, bt, history=hist, adapt=adapt,
                         results=history.recent_results(matches), mdefs=history.market_defs(),
-                        ratings=predict.export_ratings(matches), slips=slips)
+                        ratings={**predict.export_ratings(matches), **euro["ratings"]}, slips=slips)
     try:
         import notify
         notify.send(preds, history.market_defs(), hist, adapt, today_slips)

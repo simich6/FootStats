@@ -72,6 +72,35 @@ def download(force: bool = False) -> None:
         print(f"  ! calendario non disponibile ({e})")
 
 
+def download_support() -> None:
+    """Campionati di supporto (solo per stimare le squadre delle coppe europee): stagione in corso e precedente."""
+    seasons = config.season_codes(2)
+    for season in seasons:
+        for league in config.SUPPORT_LEAGUES:
+            path = config.RAW_DIR / f"{league}_{season}.csv"
+            if path.exists() and season != seasons[-1]:
+                continue
+            try:
+                r = requests.get(config.BASE_URL.format(season=season, league=league), headers=HEADERS, timeout=30)
+                r.raise_for_status()
+                path.write_bytes(r.content)
+            except requests.RequestException as e:
+                print(f"  ! {league} {season} non disponibile ({e})")
+
+
+def build_support() -> pd.DataFrame:
+    frames = []
+    for season in config.season_codes(2):
+        for league in config.SUPPORT_LEAGUES:
+            path = config.RAW_DIR / f"{league}_{season}.csv"
+            if path.exists():
+                try:
+                    frames.append(normalize(_read_csv_bytes(path.read_bytes()), league, season).dropna(subset=["h_goals", "a_goals"]))
+                except (ValueError, KeyError) as e:
+                    print(f"  ! {league} {season} illeggibile ({e})")
+    return pd.concat(frames, ignore_index=True).sort_values("date").reset_index(drop=True) if frames else pd.DataFrame()
+
+
 def _pick_odds(df: pd.DataFrame) -> pd.DataFrame:
     out = pd.DataFrame(index=df.index)
     for name, candidates in ODDS_COLUMNS.items():

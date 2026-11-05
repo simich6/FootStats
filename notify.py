@@ -77,7 +77,7 @@ def best_picks(preds: list[dict], mdefs: dict, days: int = 2, n: int = 5) -> lis
     lim = str(date.today() + timedelta(days=days - 1))
     out = []
     for f in preds:
-        if f["date"] > lim or any(f["new_team"]):
+        if f["date"] > lim or any(f["new_team"]) or f.get("exp"):
             continue
         main = _main_lines(f, mdefs)
         cands = []
@@ -115,7 +115,7 @@ def signals(preds: list[dict], days: int = 3, n: int = 8) -> list[tuple[float, s
     e = html.escape
     out = []
     for f in preds:
-        if f["date"] > lim or any(f["new_team"]):
+        if f["date"] > lim or any(f["new_team"]) or f.get("exp"):
             continue
         when = f"{f['date'][8:]}/{f['date'][5:7]}"
         match = f"{e(f['home'])}–{e(f['away'])}"

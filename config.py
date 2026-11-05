@@ -15,6 +15,16 @@ LEAGUES = {
     "F2": "Ligue 2",
 }
 
+# Campionati "di supporto": servono solo a stimare le squadre che giocano le coppe europee
+SUPPORT_LEAGUES = {"P1": "Primeira Liga", "N1": "Eredivisie", "B1": "Pro League (Belgio)",
+                   "T1": "Süper Lig", "SC0": "Scottish Premiership", "G1": "Super League (Grecia)"}
+# Forza dei campionati nelle coppe (1 = Ligue 1). Stima iniziale, corretta dai risultati di Champions della stagione
+LEAGUE_STRENGTH = {"E0": 1.20, "SP1": 1.12, "I1": 1.08, "D1": 1.08, "F1": 1.00, "P1": 0.95, "N1": 0.93,
+                   "B1": 0.87, "T1": 0.86, "G1": 0.84, "SC0": 0.80, "E1": 0.85, "I2": 0.78, "SP2": 0.78,
+                   "D2": 0.80, "F2": 0.74}
+UNKNOWN_STRENGTH = 0.80  # squadre di campionati che non seguiamo (Danimarca, Austria, Svizzera, ...)
+EURO_COMPS = {"CL": "Champions League", "EL": "Europa League", "ECL": "Conference League"}
+
 N_SEASONS = 5  # stagioni di storico (compresa quella in corso)
 
 BASE_URL = "https://www.football-data.co.uk/mmz4281/{season}/{league}.csv"

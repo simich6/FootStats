@@ -39,6 +39,15 @@ ALIASES = {
     "brighton hove albion": "Brighton", "newcastle united": "Newcastle", "west ham united": "West Ham",
     "leeds united": "Leeds", "paris": "Paris FC", "paris fc": "Paris FC",
     "deportivo la coruna": "La Coruna", "deportivo": "La Coruna", "la coruna": "La Coruna",
+    # coppe europee: squadre dei campionati di supporto (nomi di football-data.co.uk)
+    "sporting cp": "Sp Lisbon", "sporting lisbon": "Sp Lisbon", "sporting clube de portugal": "Sp Lisbon",
+    "benfica": "Benfica", "porto": "Porto", "braga": "Sp Braga", "sporting braga": "Sp Braga",
+    "psv": "PSV Eindhoven", "psv eindhoven": "PSV Eindhoven", "feyenoord rotterdam": "Feyenoord", "az": "AZ Alkmaar",
+    "union saint gilloise": "St. Gilloise", "royale union saint gilloise": "St. Gilloise", "union sg": "St. Gilloise",
+    "union st gilloise": "St. Gilloise", "club brugge kv": "Club Brugge", "rsc anderlecht": "Anderlecht", "krc genk": "Genk",
+    "galatasaray sk": "Galatasaray", "fenerbahce sk": "Fenerbahce", "besiktas jk": "Besiktas", "besiktas": "Besiktas",
+    "olympiacos": "Olympiakos", "olympiacos piraeus": "Olympiakos", "aek athens": "AEK", "aek": "AEK",
+    "paok thessaloniki": "PAOK", "inter milan": "Inter", "athletic bilbao": "Ath Bilbao", "atletico de madrid": "Ath Madrid",
 }
 DROP = {"fc", "cf", "ac", "afc", "ssc", "as", "us", "sc", "calcio", "club", "de", "sv", "vfl", "vfb", "tsg",
         "rcd", "ud", "cd", "sd", "ca", "sl", "olympique", "stade", "rc", "ogc", "losc", "acf", "bc", "fk",

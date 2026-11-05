@@ -150,10 +150,14 @@ def predict_fixtures(matches: pd.DataFrame, fixtures: pd.DataFrame, bt: dict | N
     return out
 
 
-def team_trends(matches: pd.DataFrame, last_n: int = 20) -> dict:
+def team_trends(matches: pd.DataFrame, last_n: int = 20, only: set | None = None) -> dict:
     """Ultime partite di ogni squadra della stagione in corso (fatti/subiti per ogni statistica)."""
+    if matches.empty:
+        return {}
     current = matches["season"].max()
     teams = matches[matches["season"] == current][["home", "league"]].drop_duplicates("home")
+    if only is not None:
+        teams = teams[teams["home"].isin(only)]
     trends = {}
     for team, league in teams.itertuples(index=False):
         tm = matches[(matches["home"] == team) | (matches["away"] == team)].sort_values("date").tail(last_n)
@@ -168,7 +172,7 @@ def team_trends(matches: pd.DataFrame, last_n: int = 20) -> dict:
                 f_, a_ = m[s + stat], m[o + stat]
                 g[stat] = [None if pd.isna(f_) else float(f_), None if pd.isna(a_) else float(a_)]
             games.append(g)
-        trends[team] = {"league": config.LEAGUES[league], "games": games}
+        trends[team] = {"league": config.LEAGUES.get(league, config.SUPPORT_LEAGUES.get(league, league)), "games": games}
     return trends
 
 

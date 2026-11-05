@@ -84,7 +84,7 @@ def _legs(preds: list[dict], form: dict, days: int, has_bt: bool) -> list[dict]:
     lim = now + timedelta(days=days)
     out = []
     for f in preds:
-        if any(f["new_team"]):
+        if any(f["new_team"]) or f.get("exp"):
             continue
         ko = datetime.fromisoformat(f["ko"]) if f.get("ko") else datetime.fromisoformat(f["date"] + "T23:00:00+00:00")
         if not (now < ko < lim):

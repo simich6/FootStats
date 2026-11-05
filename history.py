@@ -21,7 +21,7 @@ def top_candidates(preds: list[dict], has_backtest: bool) -> list[dict]:
     """Per ogni partita: le 5 giocate più probabili nella fascia, su mercati diversi (come il Top con la tendina)."""
     out = []
     for f in preds:
-        if any(f["new_team"]):
+        if any(f["new_team"]) or f.get("exp"):
             continue
         ok = sorted((p for p in f["picks"] if (not has_backtest or p["reliability"] != "red") and LO <= p["prob"] <= HI
                      and (p.get("base") is None or p["prob"] - p["base"] > 0.02)),
@@ -52,7 +52,7 @@ def climate_candidates(preds: list[dict]) -> list[dict]:
     out = []
     for f in preds:
         c = f.get("climate")
-        if not c or abs(c["pc"] - c["pm"]) < 0.01 or any(f["new_team"]):
+        if not c or abs(c["pc"] - c["pm"]) < 0.01 or any(f["new_team"]) or f.get("exp"):
             continue
         key = f"cards_total_o{c['line']}"
         out.append({"id": f"{f['date']}|{f['home']}|{f['away']}|clima", "date": f["date"], "league": f["league"],
