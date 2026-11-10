@@ -75,6 +75,14 @@ def main():
         except Exception as ex:
             print(f"  ! coppe: errore ({ex})")
     preds += euro["fixtures"]
+    naz = {"fixtures": [], "ratings": {}}
+    if not args.offline:
+        try:
+            import nazionali
+            naz = nazionali.update()
+        except Exception as ex:
+            print(f"  ! nazionali: errore ({ex})")
+    preds += naz["fixtures"]
     games = pd.concat([matches, support], ignore_index=True) if not support.empty else matches
     try:
         forma.attach(preds, games, euro["results"])
@@ -107,7 +115,7 @@ def main():
     import report
     path = report.build(preds, trends, leagues, bt, history=hist, adapt=adapt,
                         results=history.recent_results(matches), mdefs=history.market_defs(),
-                        ratings={**predict.export_ratings(matches), **euro["ratings"]}, slips=slips)
+                        ratings={**predict.export_ratings(matches), **euro["ratings"], **naz["ratings"]}, slips=slips)
     try:
         import notify
         notify.send(preds, history.market_defs(), hist, adapt, today_slips)
