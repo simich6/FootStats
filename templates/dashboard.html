@@ -1410,7 +1410,7 @@ const dShort=f=>new Date(f.date+"T12:00").toLocaleDateString("it-IT",{weekday:"s
 const okPick=p=>avail(p)&&(!DATA.backtest||p.reliability!=="red");
 const hscore=p=>lift(p)+0.25*(p.prob-0.5);  // un po' di "interessante" (scarto dalla media) e un po' di probabilità
 function within(f,days){const now=new Date();now.setHours(0,0,0,0);const lim=new Date(now);lim.setDate(lim.getDate()+days);return new Date(f.date+"T12:00")<lim}
-const LORDER=["Serie A","Premier League","La Liga","Bundesliga","Ligue 1","Champions League","Europa League","Conference League","Serie B","Championship","Segunda División","2. Bundesliga","Ligue 2"];
+const LORDER=["Serie A","Premier League","La Liga","Bundesliga","Ligue 1","Champions League","Europa League","Conference League","Nazionali","Serie B","Championship","Segunda División","2. Bundesliga","Ligue 2"];
 function leaguesWithFx(){const n={};DATA.fixtures.forEach(f=>n[f.league]=(n[f.league]||0)+1);
   const o=l=>{const i=LORDER.indexOf(l);return i<0?99:i};return Object.keys(n).sort((a,b)=>o(a)-o(b)).map(l=>[l,n[l]])}
 function fxOf(lg){return DATA.fixtures.filter(f=>f.league===lg).sort((a,b)=>kickoff(a)-kickoff(b))}
@@ -1638,7 +1638,7 @@ function renderMatch(){
   const head=`<div class="mstick"><div class="mhead2">${tbadge(f.home,44)}<div class="mh-t"><div class="vs"><b>${esc(f.home)}</b><span>vs</span><b>${esc(f.away)}</b></div>
       <div class="mh-m">${esc(f.league)} · ${dShort(f)} ${esc(f.time||"")}${f.big?' · <span class="bigm" style="margin:0">Big match</span>':""}${f.rivalry?` · <span class="bigm hot" style="margin:0">${esc(f.rivalry.name)}</span>`:""}</div></div>${tbadge(f.away,44)}</div>
     <div class="subtabs" role="tablist">${SUB.map(([k,l])=>`<button role="tab" aria-pressed="${PT.sub===k}" data-sub="${k}">${l}</button>`).join("")}</div></div>`;
-  const sum=`${cupHtml(f)}<div class="panel"><div class="row" style="justify-content:space-between"><span>${miniForm(f.home)}</span><span class="note">ultime 5</span><span>${miniForm(f.away)}</span></div>
+  const sum=`${cupHtml(f)}<div class="panel">${games(f.home).length||games(f.away).length?`<div class="row" style="justify-content:space-between"><span>${miniForm(f.home)}</span><span class="note">ultime 5</span><span>${miniForm(f.away)}</span></div>`:""}
       <div class="bar" role="img" aria-label="1 ${pct(h)}, X ${pct(d)}, 2 ${pct(a)}"><span class="h" style="flex:${h*100}">1 ${pct(h)}</span><span class="d" style="flex:${d*100}">X ${pct(d)}</span><span class="x" style="flex:${a*100}">2 ${pct(a)}</span></div>
       <p class="note" style="margin:8px 0 0;text-align:center">Gol attesi <b>${eg?eg[0].toFixed(1)+" – "+eg[1].toFixed(1):"–"}</b>${top?` · risultato più probabile <b>${top[0]}-${top[1]}</b> (${(top[2]*100).toFixed(0)}%)`:""}${f.new_team.some(Boolean)?" · ⚠ una squadra senza storico nel campionato: stime meno affidabili":""}</p>
       ${f.absent&&f.absent.some(a=>a.length)?`<div class="absent">${[0,1].map(k=>f.absent[k].length?`<div><b>Assenti ${esc(k?f.away:f.home)}:</b> ${f.absent[k].map(p=>`${esc(p.n)}${p.type&&/questionable/i.test(p.type)?" (in dubbio)":""}`).join(", ")}</div>`:"").join("")}</div>`:""}</div>
@@ -1874,6 +1874,7 @@ function formHtml(f){const F=f.form;if(!F||!F.some(Boolean))return"";
   return`<h2 style="margin-top:20px">Stato di forma</h2><div class="panel"><div class="grid2">${col(f.home,F[0])}${col(f.away,F[1])}</div>
     <p class="note" style="margin-bottom:0">Ultime 6 partite di campionato contro la media della stagione. ▲/▼ = meglio/peggio del solito. Il modello dà già più peso alle partite recenti: questo riquadro serve a capire il momento. Per infortuni e squalifiche usa 💬 Chiedi a Claude.</p></div>`}
 function cupHtml(f){if(!f.exp)return"";
+  if(f.code==="NAZ")return`<div class="tip warn"><span class="ti">β</span><div><b>${esc(f.stage||"Nazionali")}: stima sperimentale.</b> La forza delle nazionali viene dal rating Elo (${esc(f.home)} ${f.elo?.[0]} · ${esc(f.away)} ${f.elo?.[1]}; 100 punti di differenza ≈ 64% di aspettativa per la più forte). Per le nazionali non ci sono dati gratuiti su tiri, corner e cartellini: trovi solo esito, gol e primo tempo. Non entra in storico e schedine.</div></div>`;
   const lim=f.limited?.map((x,i)=>x?(i?f.away:f.home):null).filter(Boolean)||[];
   const path=(t,a)=>a&&a.length?a.map(r=>{const home=r.home===t,gf=home?r.hg:r.ag,ga=home?r.ag:r.hg,res=gf>ga?"V":gf===ga?"N":"P";
       return`<div class="rk-li" style="grid-template-columns:1.6em 3.2em minmax(0,1fr) auto"><span class="form"><span class="${res}" style="width:20px;height:20px">${res}</span></span><span>${r.date.slice(8)}/${r.date.slice(5,7)}</span><span class="rk-m">${home?"vs":"@"} ${esc(home?r.away:r.home)}</span><b>${gf}-${ga}</b></div>`}).join(""):'<p class="note">Nessuna partita giocata nel torneo (o dati non disponibili).</p>';
